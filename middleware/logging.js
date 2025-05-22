@@ -1,8 +1,38 @@
-// middleware/logging.js - Better Stack logging middleware
-const { Logtail } = require('@logtail/node');
+// middleware/logging.js - Better Stack HTTP logging middleware
+const https = require('https');
 
-// Initialize Logtail with your token
-const logtail = new Logtail(process.env.LOGTAIL_TOKEN);
+const logtailToken = process.env.LOGTAIL_TOKEN;
+const logtailEndpoint = process.env.LOGTAIL_ENDPOINT || 'https://s1319479.eu-nbg-2.betterstackdata.com';
+
+if (!logtailToken) {
+  console.warn('⚠️  LOGTAIL_TOKEN not found in environment variables');
+} else {
+  console.log('✅ Logtail token loaded:', logtailToken.substring(0, 8) + '...');
+}
+
+// Send log via HTTP endpoint
+const sendToLogtail = async (logData) => {
+  if (!logtailToken) return;
+
+  const payload = JSON.stringify(logData);
+  
+  try {
+    const response = await fetch(logtailEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${logtailToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: payload
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send log to Logtail:', response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error('Error sending to Logtail:', error.message);
+  }
+};
 
 const loggingMiddleware = (req, res, next) => {
   const startTime = Date.now();
@@ -16,7 +46,9 @@ const loggingMiddleware = (req, res, next) => {
     
     // Log structured data to Better Stack
     const logData = {
-      timestamp: new Date().toISOString(),
+      dt: new Date().toISOString(), // Better Stack expects 'dt' for timestamp
+      level: res.statusCode >= 400 ? 'error' : 'info',
+      message: `${req.method} ${req.originalUrl} - ${res.statusCode}`,
       method: req.method,
       url: req.originalUrl,
       path: req.path,
@@ -28,14 +60,16 @@ const loggingMiddleware = (req, res, next) => {
       country: req.params.country || null,
       endpoint: req.route?.path || req.path,
       query: Object.keys(req.query).length > 0 ? req.query : null,
-      contentLength: res.get('Content-Length') || 0
+      contentLength: res.get('Content-Length') || 0,
+      service: 'eu-dayahead-api',
+      environment: process.env.NODE_ENV || 'development'
     };
 
-    // Send to Better Stack
-    if (res.statusCode >= 400) {
-      logtail.error('API Error', logData);
-    } else {
-      logtail.info('API Request', logData);
+    // Send to Better Stack asynchronously
+    if (logtailToken) {
+      sendToLogtail(logData).catch(err => {
+        console.error('Logtail logging failed:', err.message);
+      });
     }
 
     // Also log to console for local development
@@ -53,15 +87,23 @@ const loggingMiddleware = (req, res, next) => {
 // Error logging function
 const logError = (error, req = null) => {
   const errorData = {
-    timestamp: new Date().toISOString(),
+    dt: new Date().toISOString(),
+    level: 'error',
+    message: `Application Error: ${error.message}`,
     error: error.message,
     stack: error.stack,
     url: req?.originalUrl || 'Unknown',
     method: req?.method || 'Unknown',
-    ip: req?.ip || req?.connection?.remoteAddress || 'Unknown'
+    ip: req?.ip || req?.connection?.remoteAddress || 'Unknown',
+    service: 'eu-dayahead-api',
+    environment: process.env.NODE_ENV || 'development'
   };
 
-  logtail.error('Application Error', errorData);
+  if (logtailToken) {
+    sendToLogtail(errorData).catch(err => {
+      console.error('Logtail error logging failed:', err.message);
+    });
+  }
   
   if (process.env.NODE_ENV !== 'production') {
     console.error('Error:', error);
@@ -71,5 +113,5 @@ const logError = (error, req = null) => {
 module.exports = {
   loggingMiddleware,
   logError,
-  logtail
+  sendToLogtail
 };
