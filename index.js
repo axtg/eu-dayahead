@@ -51,10 +51,10 @@ app.use('*', (req, res) => {
 });
 
 // Error handler
-app.use((error, req, res, next) => {
+app.use((error, req, res) => {
   // Log error to Better Stack
   logError(error, req);
-  
+
   res.status(500).json({
     status: 'error',
     message: 'Internal server error'

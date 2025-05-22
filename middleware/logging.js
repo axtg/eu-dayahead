@@ -1,6 +1,3 @@
-// middleware/logging.js - Better Stack HTTP logging middleware
-const https = require('https');
-
 const logtailToken = process.env.LOGTAIL_TOKEN;
 const logtailEndpoint = process.env.LOGTAIL_ENDPOINT || 'https://s1319479.eu-nbg-2.betterstackdata.com';
 
@@ -11,16 +8,16 @@ if (!logtailToken) {
 }
 
 // Send log via HTTP endpoint
-const sendToLogtail = async (logData) => {
+const sendToLogtail = async logData => {
   if (!logtailToken) return;
 
   const payload = JSON.stringify(logData);
-  
+
   try {
     const response = await fetch(logtailEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${logtailToken}`,
+        Authorization: `Bearer ${logtailToken}`,
         'Content-Type': 'application/json'
       },
       body: payload
@@ -36,14 +33,14 @@ const sendToLogtail = async (logData) => {
 
 const loggingMiddleware = (req, res, next) => {
   const startTime = Date.now();
-  
+
   // Capture original end function
   const originalEnd = res.end;
-  
+
   // Override res.end to capture response data
-  res.end = function(chunk, encoding) {
+  res.end = function (chunk, encoding) {
     const responseTime = Date.now() - startTime;
-    
+
     // Log structured data to Better Stack
     const logData = {
       dt: new Date().toISOString(), // Better Stack expects 'dt' for timestamp
@@ -104,7 +101,7 @@ const logError = (error, req = null) => {
       console.error('Logtail error logging failed:', err.message);
     });
   }
-  
+
   if (process.env.NODE_ENV !== 'production') {
     console.error('Error:', error);
   }
