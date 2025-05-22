@@ -46,7 +46,7 @@ app.use('/api/providers', providerRoutes);
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
-    message: 'Endpoint not found. Use /api/countries to see available endpoints.'
+    message: 'Endpoint not found. Visit /docs for documentation.'
   });
 });
 
