@@ -5,6 +5,9 @@ const cors = require('cors');
 // Load environment variables
 require('dotenv').config();
 
+// Import logging middleware
+const { loggingMiddleware, logError } = require('./middleware/logging');
+
 // Import route handlers
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
@@ -20,6 +23,9 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Add EU-based Better Stack logging middleware
+app.use(loggingMiddleware);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -45,8 +51,10 @@ app.use('*', (req, res) => {
 });
 
 // Error handler
-app.use((error, req, res) => {
-  console.error('Server Error:', error);
+app.use((error, req, res, next) => {
+  // Log error to Better Stack
+  logError(error, req);
+  
   res.status(500).json({
     status: 'error',
     message: 'Internal server error'
