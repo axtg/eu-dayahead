@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>European Energy Prices API - Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <link rel="icon" type="image/png" href="https://petstore.swagger.io/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="https://petstore.swagger.io/favicon-16x16.png" sizes="16x16" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+        .swagger-ui .topbar {
+            background-color: #2563eb;
+        }
+        .swagger-ui .topbar .download-url-wrapper input[type=text] {
+            border-color: #2563eb;
+        }
+        .swagger-ui .info .title {
+            color: #2563eb;
+        }
+        .swagger-ui .scheme-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .custom-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .custom-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+        .custom-header p {
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .quick-links {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem auto;
+            max-width: 1200px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .quick-links h3 {
+            margin-top: 0;
+            color: #2563eb;
+        }
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .link-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 1rem;
+            text-decoration: none;
+            color: #374151;
+            transition: all 0.2s;
+        }
+        .link-card:hover {
+            background: #e2e8f0;
+            border-color: #2563eb;
+            text-decoration: none;
+        }
+        .link-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: #2563eb;
+            font-size: 1rem;
+        }
+        .link-card p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="custom-header">
+        <h1>🌍 European Energy Prices API</h1>
+        <p>Real-time electricity prices across 9 European countries</p>
+    </div>
+
+    <div class="quick-links">
+        <h3>🚀 Quick Start Examples</h3>
+        <div class="links-grid">
+            <a href="#/Countries/get_api__country__today" class="link-card">
+                <h4>Today's Prices</h4>
+                <p>GET /api/nl/today</p>
+            </a>
+            <a href="#/Countries/get_api__country__tomorrow" class="link-card">
+                <h4>Tomorrow's Prices</h4>
+                <p>GET /api/de/tomorrow</p>
+            </a>
+            <a href="#/Countries/get_api_countries" class="link-card">
+                <h4>Supported Countries</h4>
+                <p>GET /api/countries</p>
+            </a>
+            <a href="#/Providers/get_api_providers_next_energy" class="link-card">
+                <h4>Provider Presets</h4>
+                <p>GET /api/providers/next-energy</p>
+            </a>
+        </div>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            // Begin Swagger UI call region
+            const ui = SwaggerUIBundle({
+                url: '/api-docs/openapi.yaml', // Fixed: absolute path instead of relative
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                tryItOutEnabled: true,
+                filter: true,
+                supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+                onComplete: function() {
+                    console.log("Swagger UI loaded successfully");
+                },
+                requestInterceptor: function(request) {
+                    // You can modify requests here if needed
+                    return request;
+                },
+                responseInterceptor: function(response) {
+                    // You can modify responses here if needed
+                    return response;
+                }
+            });
+            // End Swagger UI call region
+
+            window.ui = ui;
+        };
+    </script>
+</body>
+</html>

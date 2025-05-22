@@ -1,0 +1,799 @@
+openapi: 3.0.3
+info:
+  title: European Energy Prices API
+  description: |
+    A comprehensive REST API for fetching real-time electricity prices across 9 European countries, 
+    with support for energy provider markups, VAT calculations, and flexible time periods.
+    
+    ## Features
+    - **9 European Countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
+    - **Multiple Time Periods** - Today, tomorrow, next 24 hours, custom date ranges
+    - **Provider Markups** - Built-in support for energy provider pricing
+    - **Flexible VAT** - Country-specific VAT rates or custom percentages
+    - **Multi-Currency** - EUR, CHF, DKK, NOK, SEK support
+    - **Timezone Aware** - Proper timezone handling for each country
+    
+    ## Data Sources
+    - **Primary**: Stekker.app - European energy price aggregator
+    - **Backup**: ENTSOE Transparency Platform - Official EU energy data
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/your-username/european-energy-prices-api
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://your-api-domain.com
+    description: Production server
+
+tags:
+  - name: Countries
+    description: Country-specific energy price endpoints
+  - name: Legacy
+    description: Backward compatibility endpoints (Netherlands-focused)
+  - name: Providers
+    description: Energy provider preset endpoints
+  - name: System
+    description: System health and information endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Check API health and get basic system information
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/countries:
+    get:
+      tags:
+        - Countries
+      summary: List supported countries
+      description: Get a list of all supported countries with their configuration details
+      responses:
+        '200':
+          description: List of supported countries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountriesResponse'
+
+  /api/{country}/today:
+    get:
+      tags:
+        - Countries
+      summary: Get today's energy prices
+      description: Get energy prices for a specific country from 00:00 to 23:59 of the current day
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Today's energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/{country}/tomorrow:
+    get:
+      tags:
+        - Countries
+      summary: Get tomorrow's energy prices
+      description: Get energy prices for a specific country from 00:00 to 23:59 of the next day
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Tomorrow's energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/{country}/next24h:
+    get:
+      tags:
+        - Countries
+      summary: Get next 24 hours of energy prices
+      description: Get energy prices for the next 24 hours from the current time, spanning across days if necessary
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Next 24 hours of energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Next24HoursResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/today:
+    get:
+      tags:
+        - Legacy
+      summary: Get today's Netherlands energy prices
+      description: Backward compatibility endpoint - equivalent to /api/nl/today
+      parameters:
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Today's Netherlands energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+
+  /api/tomorrow:
+    get:
+      tags:
+        - Legacy
+      summary: Get tomorrow's Netherlands energy prices
+      description: Backward compatibility endpoint - equivalent to /api/nl/tomorrow
+      parameters:
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Tomorrow's Netherlands energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+
+  /api/prices/{startDate}/{endDate}:
+    get:
+      tags:
+        - Legacy
+      summary: Get energy prices for date range
+      description: Get Netherlands energy prices for a specific date range
+      parameters:
+        - name: startDate
+          in: path
+          required: true
+          description: Start date in YYYY-MM-DD format
+          schema:
+            type: string
+            format: date
+            example: "2025-05-23"
+        - name: endDate
+          in: path
+          required: true
+          description: End date in YYYY-MM-DD format
+          schema:
+            type: string
+            format: date
+            example: "2025-05-24"
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Energy prices for date range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/current:
+    get:
+      tags:
+        - Legacy
+      summary: Get current hour energy price
+      description: Get the energy price for the current hour (Netherlands)
+      parameters:
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Current hour energy price
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentPriceResponse'
+        '404':
+          description: Current hour price not found
+
+  /api/next/{hours}:
+    get:
+      tags:
+        - Legacy
+      summary: Get next N hours of energy prices
+      description: Get energy prices for the next N hours from current time (Netherlands, 1-48 hours)
+      parameters:
+        - name: hours
+          in: path
+          required: true
+          description: Number of hours to fetch (1-48)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 48
+            example: 8
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: Next N hours of energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Next24HoursResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/providers:
+    get:
+      tags:
+        - Providers
+      summary: List energy providers
+      description: Get a list of all available energy provider presets
+      responses:
+        '200':
+          description: List of energy providers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvidersResponse'
+
+  /api/providers/next-energy:
+    get:
+      tags:
+        - Providers
+      summary: Next Energy pricing preset
+      description: Get energy prices with Next Energy markup and VAT (Netherlands)
+      responses:
+        '200':
+          description: Next Energy pricing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderPricesResponse'
+
+  /api/providers/{provider}/{country}:
+    get:
+      tags:
+        - Providers
+      summary: Generic provider pricing
+      description: Get energy prices with specific provider markup for a country
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: Energy provider identifier
+          schema:
+            type: string
+            enum: [next-energy, vattenfall, eneco]
+            example: "vattenfall"
+        - name: country
+          in: path
+          required: true
+          description: Country code
+          schema:
+            type: string
+            pattern: '^[a-z]{2}$'
+            example: "de"
+      responses:
+        '200':
+          description: Provider pricing for country
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderPricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Provider or country not found
+
+components:
+  parameters:
+    CountryPath:
+      name: country
+      in: path
+      required: true
+      description: |
+        Country code (ISO 3166-1 alpha-2). 
+        Supported: nl, de, be, fr, at, ch, dk, no, se
+      schema:
+        type: string
+        pattern: '^[a-z]{2}$'
+        example: "nl"
+
+    FixedMarkup:
+      name: markup
+      in: query
+      description: Fixed markup per kWh in local currency (e.g., 0.024 for €0.024/kWh)
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        example: 0.024
+      
+    VariableMarkup:
+      name: variableMarkup
+      in: query
+      description: Variable markup as percentage (e.g., 5 for 5%)
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        example: 5
+
+    VAT:
+      name: vat
+      in: query
+      description: VAT rate as decimal (e.g., 0.21 for 21%)
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 1
+        example: 0.21
+
+    AutoVAT:
+      name: autoVat
+      in: query
+      description: Use country's default VAT rate
+      schema:
+        type: boolean
+        example: true
+
+    RoundTo:
+      name: roundTo
+      in: query
+      description: Number of decimal places to round prices to
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10
+        default: 5
+        example: 5
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+        supportedCountries:
+          type: integer
+          example: 9
+
+    CountriesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Country'
+        total:
+          type: integer
+          example: 9
+
+    Country:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "NL"
+        name:
+          type: string
+          example: "Netherlands"
+        currency:
+          type: string
+          example: "EUR"
+        timezone:
+          type: string
+          example: "Europe/Amsterdam"
+        defaultVat:
+          type: number
+          example: 0.21
+        vatPercent:
+          type: string
+          example: "21%"
+
+    PricesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        country:
+          $ref: '#/components/schemas/CountryInfo'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceData'
+        markup:
+          $ref: '#/components/schemas/MarkupInfo'
+        fetchedAt:
+          type: string
+          format: date-time
+        info:
+          $ref: '#/components/schemas/ResponseInfo'
+
+    Next24HoursResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        country:
+          $ref: '#/components/schemas/CountryInfo'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtendedPriceData'
+        markup:
+          $ref: '#/components/schemas/MarkupInfo'
+        fetchedAt:
+          type: string
+          format: date-time
+        info:
+          $ref: '#/components/schemas/ExtendedResponseInfo'
+
+    CurrentPriceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        country:
+          $ref: '#/components/schemas/CountryInfo'
+        data:
+          $ref: '#/components/schemas/CurrentPriceData'
+        fetchedAt:
+          type: string
+          format: date-time
+
+    ProvidersResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Provider'
+        total:
+          type: integer
+          example: 3
+
+    ProviderPricesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        provider:
+          type: string
+          example: "Next Energy"
+        country:
+          $ref: '#/components/schemas/CountryInfo'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceData'
+        markup:
+          $ref: '#/components/schemas/ProviderMarkupInfo'
+        fetchedAt:
+          type: string
+          format: date-time
+
+    CountryInfo:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "NL"
+        name:
+          type: string
+          example: "Netherlands"
+        currency:
+          type: string
+          example: "EUR"
+        timezone:
+          type: string
+          example: "Europe/Amsterdam"
+
+    PriceData:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+          example: "2025-05-23T00:00:00.000Z"
+        priceRaw:
+          type: number
+          format: float
+          description: Raw market price in local currency per MWh
+          example: 87.12
+        price:
+          type: number
+          format: float
+          description: Final price in local currency per kWh (including markup and VAT)
+          example: 0.13442
+        hour:
+          type: string
+          description: Local time in HH:MM format
+          example: "02:00"
+        localTime:
+          type: string
+          description: Formatted local time
+          example: "02:00"
+        markup:
+          $ref: '#/components/schemas/MarkupDetails'
+
+    ExtendedPriceData:
+      allOf:
+        - $ref: '#/components/schemas/PriceData'
+        - type: object
+          properties:
+            hourFromNow:
+              type: integer
+              description: Hours from current time
+              example: 0
+            dayOfWeek:
+              type: string
+              example: "Friday"
+
+    CurrentPriceData:
+      type: object
+      properties:
+        hour:
+          type: string
+          format: date-time
+          example: "2025-05-23T14:00:00.000Z"
+        price:
+          type: number
+          format: float
+          example: 0.13442
+        priceRaw:
+          type: number
+          format: float
+          example: 87.12
+        currency:
+          type: string
+          example: "EUR"
+        unit:
+          type: string
+          example: "kWh"
+        markup:
+          $ref: '#/components/schemas/MarkupDetails'
+
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "next-energy"
+        name:
+          type: string
+          example: "Next Energy"
+        countries:
+          type: array
+          items:
+            type: string
+          example: ["NL"]
+        markup:
+          type: object
+          properties:
+            fixed:
+              type: string
+              example: "€0.024/kWh"
+            vat:
+              type: string
+              example: "21%"
+        endpoint:
+          type: string
+          example: "/api/providers/next-energy"
+
+    MarkupInfo:
+      type: object
+      properties:
+        fixedMarkup:
+          type: number
+          example: 0.024
+        variableMarkup:
+          type: number
+          example: 0
+        vat:
+          type: number
+          example: 0.21
+        includeVat:
+          type: boolean
+          example: true
+        roundTo:
+          type: integer
+          example: 5
+
+    MarkupDetails:
+      type: object
+      properties:
+        fixed:
+          type: number
+          example: 0.024
+        variable:
+          type: number
+          example: 0
+        vat:
+          type: number
+          example: 0.21
+        vatPercent:
+          type: string
+          example: "21%"
+        originalPrice:
+          type: number
+          example: 0.08712
+
+    ProviderMarkupInfo:
+      type: object
+      properties:
+        fixed:
+          type: number
+          example: 0.024
+        vat:
+          type: number
+          example: 0.21
+        vatPercent:
+          type: string
+          example: "21%"
+        description:
+          type: string
+          example: "Next Energy standard markup with Dutch VAT"
+
+    ResponseInfo:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "today"
+        date:
+          type: string
+          example: "22-5-2025"
+        totalHours:
+          type: integer
+          example: 24
+        priceUnit:
+          type: string
+          example: "EUR/kWh"
+        timezone:
+          type: string
+          example: "Europe/Amsterdam"
+
+    ExtendedResponseInfo:
+      allOf:
+        - $ref: '#/components/schemas/ResponseInfo'
+        - type: object
+          properties:
+            startTime:
+              type: string
+              format: date-time
+              example: "2025-05-23T12:00:00.000Z"
+            endTime:
+              type: string
+              format: date-time
+              example: "2025-05-24T12:00:00.000Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Unsupported country: xx. Use /api/countries to see supported countries."
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  examples:
+    NetherlandsToday:
+      summary: Netherlands today with Next Energy markup
+      value:
+        status: "success"
+        country:
+          code: "NL"
+          name: "Netherlands"
+          currency: "EUR"
+          timezone: "Europe/Amsterdam"
+        data:
+          - time: "2025-05-23T00:00:00.000Z"
+            priceRaw: 87.12
+            price: 0.13442
+            hour: "02:00"
+            localTime: "02:00"
+            markup:
+              fixed: 0.024
+              variable: 0
+              vat: 0.21
+              vatPercent: "21%"
+              originalPrice: 0.08712
+        markup:
+          fixedMarkup: 0.024
+          variableMarkup: 0
+          vat: 0.21
+          includeVat: true
+          roundTo: 5
+        fetchedAt: "2025-05-22T13:08:42.000Z"
+        info:
+          type: "today"
+          date: "22-5-2025"
+          totalHours: 24
+          priceUnit: "EUR/kWh"
+          timezone: "Europe/Amsterdam"
