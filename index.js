@@ -1,6 +1,6 @@
+// index.js - Main server file
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 
 // Load environment variables
 require('dotenv').config();
@@ -31,13 +31,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Mount route handlers
+// Mount route handlers - ORDER MATTERS!
+app.use('/docs', docsRoutes);
 app.use('/api', countryRoutes);
 app.use('/api/providers', providerRoutes);
-app.use('/api-docs', docsRoutes);
-
-// Serve static documentation files
-app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -104,8 +101,8 @@ if (require.main === module) {
     console.log('  /api/ch/tomorrow?markup=0.035&vat=0.077');
 
     console.log('\n📚 DOCUMENTATION:');
-    console.log('  Interactive API Docs: http://localhost:3000/api-docs');
-    console.log('  OpenAPI Spec: http://localhost:3000/api-docs/openapi.yaml');
+    console.log('  Interactive API Docs: http://localhost:3000/docs');
+    console.log('  OpenAPI Spec: http://localhost:3000/docs/openapi.yaml');
 
     console.log('\n🔗 Quick test: http://localhost:3000/api/countries');
   });

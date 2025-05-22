@@ -13,9 +13,4 @@ router.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../docs/index.html'));
 });
 
-// Redirect /docs to documentation
-router.get('/docs', (req, res) => {
-  res.redirect('/api-docs/');
-});
-
 module.exports = router;

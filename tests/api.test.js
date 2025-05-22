@@ -132,14 +132,14 @@ describe('European Energy Prices API', () => {
   });
 
   describe('Documentation Endpoints', () => {
-    test('GET /api-docs/openapi.yaml should return OpenAPI spec', async () => {
-      const response = await request(app).get('/api-docs/openapi.yaml').expect(200);
+    test('GET /docs/openapi.yaml should return OpenAPI spec', async () => {
+      const response = await request(app).get('/docs/openapi.yaml').expect(200);
 
       expect(response.headers['content-type']).toMatch(/yaml|text/);
     });
 
-    test('GET /api-docs should return HTML documentation', async () => {
-      const response = await request(app).get('/api-docs/').expect(200);
+    test('GET /docs should return HTML documentation', async () => {
+      const response = await request(app).get('/docs/').expect(200);
 
       expect(response.headers['content-type']).toMatch(/html/);
       expect(response.text).toContain('European Energy Prices API');
