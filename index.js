@@ -65,17 +65,10 @@ if (require.main === module) {
     console.log("  GET /api/{country}/tomorrow - Tomorrow's prices for country");
     console.log('  GET /api/{country}/next24h - Next 24 hours for country');
 
-    console.log('\n🇳🇱 NETHERLANDS SHORTCUTS (Backward compatibility):');
+    console.log('\n🇳🇱 NL SHORTCUTS:');
     console.log('  GET /api/today - Netherlands today (alias for /api/nl/today)');
     console.log('  GET /api/tomorrow - Netherlands tomorrow');
     console.log('  GET /api/next/24 - Netherlands next 24 hours');
-
-    console.log('\n⚙️  ADVANCED ENDPOINTS:');
-    console.log('  GET /api/prices - Current day prices (NL)');
-    console.log('  GET /api/prices/:startDate/:endDate - Date range prices (NL)');
-    console.log('  GET /api/next/:hours - Next N hours (NL, 1-48)');
-    console.log('  GET /api/forecast - Forecast prices (NL)');
-    console.log('  GET /api/current - Current hour price (NL)');
     console.log('  GET /api/providers/next-energy - Next Energy preset');
     console.log('  GET /health - Health check');
 
@@ -88,7 +81,7 @@ if (require.main === module) {
 
     console.log('\n📊 QUERY PARAMETERS:');
     console.log('  markup or fixedMarkup - Fixed markup in local currency/kWh (e.g., 0.024)');
-    console.log('  variableMarkup - Variable markup in % (e.g., 5)');
+    // console.log('  variableMarkup - Variable markup in % (e.g., 5)');
     console.log('  vat - VAT as decimal (e.g., 0.21 for 21%)');
     console.log("  autoVat - Use country's default VAT rate (true/false)");
     console.log('  roundTo - Decimal places to round to (default: 5)');

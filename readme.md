@@ -119,7 +119,7 @@ curl http://localhost:3000/api/countries
 | `GET /api/countries`          | List all supported countries    |                    |
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
 | `GET /api/{country}/tomorrow` | Tomorrow's prices (00:00-23:59) | `/api/de/tomorrow` |
-| `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
+| `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next/24`  |
 
 ### 🇳🇱 Netherlands Shortcuts (Backward Compatibility)
 
@@ -127,17 +127,7 @@ curl http://localhost:3000/api/countries
 | ------------------- | -------------------- | ------------------ |
 | `GET /api/today`    | Netherlands today    | `/api/nl/today`    |
 | `GET /api/tomorrow` | Netherlands tomorrow | `/api/nl/tomorrow` |
-| `GET /api/next/24`  | Netherlands next 24h | `/api/nl/next24h`  |
-
-### ⚙️ Advanced Endpoints
-
-| Endpoint                              | Description             |
-| ------------------------------------- | ----------------------- |
-| `GET /api/prices`                     | Current day prices (NL) |
-| `GET /api/prices/:startDate/:endDate` | Date range prices (NL)  |
-| `GET /api/next/:hours`                | Next N hours (NL, 1-48) |
-| `GET /api/forecast`                   | Forecast prices (NL)    |
-| `GET /api/current`                    | Current hour price (NL) |
+| `GET /api/next/24`  | Netherlands next 24h |                    |
 
 ### 🏢 Energy Provider Presets
 
@@ -152,7 +142,6 @@ curl http://localhost:3000/api/countries
 | Parameter                 | Type    | Description                | Example          |
 | ------------------------- | ------- | -------------------------- | ---------------- |
 | `markup` or `fixedMarkup` | Number  | Fixed markup per kWh       | `0.024`          |
-| `variableMarkup`          | Number  | Variable markup percentage | `5` (for 5%)     |
 | `vat`                     | Number  | VAT as decimal             | `0.21` (for 21%) |
 | `autoVat`                 | Boolean | Use country's default VAT  | `true`           |
 | `roundTo`                 | Integer | Decimal places to round to | `5` (default)    |
@@ -296,8 +285,8 @@ const PROVIDER_PRESETS = {
 
 ## 🔗 Data Sources
 
-- **Primary**: [Stekker.app](https://stekker.app) - European energy price aggregator
-- **Backup**: [ENTSOE Transparency Platform](https://transparency.entsoe.eu) - Official EU energy data (requires API key)
+- **Primary**: [ENTSOE Transparency Platform](https://transparency.entsoe.eu) - Official EU energy data (requires API key)
+- **Backup**: [Stekker.app](https://stekker.app) - European energy price aggregator
 
 ## ⚡ Performance
 
@@ -356,8 +345,6 @@ The project includes a complete GitHub Actions workflow:
 ### GitHub Secrets Required:
 
 ```bash
-DOCKER_USERNAME=your-docker-hub-username
-DOCKER_PASSWORD=your-docker-hub-password
 ENTSOE_API_KEY=your-entsoe-api-key
 ```
 
