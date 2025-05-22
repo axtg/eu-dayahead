@@ -16,11 +16,17 @@ A comprehensive REST API for fetching real-time electricity prices across 9 Euro
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd european-energy-prices-api
+git clone https://github.com/your-username/eu-dayahead.git
+cd eu-dayahead
 
 # Install dependencies
 npm install
+
+# Copy environment variables
+cp .env.example .env
+
+# Edit environment variables (optional)
+nano .env
 
 # Start the server
 npm start
@@ -29,74 +35,132 @@ npm start
 npm run dev
 ```
 
+### 🔑 Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+# Required
+PORT=3000
+NODE_ENV=development
+
+# Optional: ENTSOE API Key for more reliable data
+ENTSOE_API_KEY=your-api-key-from-entsoe
+
+# Optional: Customize cache and rate limiting
+CACHE_TIMEOUT_MS=3600000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+**Getting an ENTSOE API Key (Recommended):**
+
+1. Register at [ENTSOE Transparency Platform](https://transparency.entsoe.eu/)
+2. Request API access (free, takes 1-3 business days)
+3. Add your API key to `.env`
+4. Restart the server - it will automatically use ENTSOE as primary data source
+
+### 🐳 Docker Setup
+
+```bash
+# Build and run with Docker
+docker build -t eu-energy-api .
+docker run -p 3000:3000 eu-energy-api
+
+# Or use Docker Compose
+docker-compose up -d
+```
+
 ## 🌍 Supported Countries
 
-| Code | Country | Currency | Default VAT | Timezone |
-|------|---------|----------|-------------|----------|
-| `nl` | Netherlands | EUR | 21% | Europe/Amsterdam |
-| `de` | Germany | EUR | 19% | Europe/Berlin |
-| `be` | Belgium | EUR | 21% | Europe/Brussels |
-| `fr` | France | EUR | 20% | Europe/Paris |
-| `at` | Austria | EUR | 20% | Europe/Vienna |
-| `ch` | Switzerland | CHF | 7.7% | Europe/Zurich |
-| `dk` | Denmark | DKK | 25% | Europe/Copenhagen |
-| `no` | Norway | NOK | 25% | Europe/Oslo |
-| `se` | Sweden | SEK | 25% | Europe/Stockholm |
+| Code | Country     | Currency | Default VAT | Timezone          |
+| ---- | ----------- | -------- | ----------- | ----------------- |
+| `nl` | Netherlands | EUR      | 21%         | Europe/Amsterdam  |
+| `de` | Germany     | EUR      | 19%         | Europe/Berlin     |
+| `be` | Belgium     | EUR      | 21%         | Europe/Brussels   |
+| `fr` | France      | EUR      | 20%         | Europe/Paris      |
+| `at` | Austria     | EUR      | 20%         | Europe/Vienna     |
+| `ch` | Switzerland | CHF      | 7.7%        | Europe/Zurich     |
+| `dk` | Denmark     | DKK      | 25%         | Europe/Copenhagen |
+| `no` | Norway      | NOK      | 25%         | Europe/Oslo       |
+| `se` | Sweden      | SEK      | 25%         | Europe/Stockholm  |
 
 ## 🎯 Quick Start Examples
 
 ### Get Today's Prices for Netherlands
+
 ```bash
 curl http://localhost:3000/api/nl/today
 ```
 
 ### Get Tomorrow's Prices with Next Energy Markup
+
 ```bash
 curl "http://localhost:3000/api/nl/tomorrow?markup=0.024&vat=0.21"
 ```
 
 ### Get German Prices with Auto VAT
+
 ```bash
 curl "http://localhost:3000/api/de/today?autoVat=true"
 ```
 
 ### List All Supported Countries
+
 ```bash
 curl http://localhost:3000/api/countries
 ```
 
 ## 📋 API Endpoints
 
-### 🎯 Country-Specific Endpoints
+### 🎯 Country-Specific Endpoints (Recommended)
 
-| Endpoint | Description | Example |
-|----------|-------------|---------|
-| `GET /api/countries` | List all supported countries | |
-| `GET /api/{country}/today` | Today's prices (00:00-23:59) | `/api/nl/today` |
+| Endpoint                      | Description                     | Example            |
+| ----------------------------- | ------------------------------- | ------------------ |
+| `GET /api/countries`          | List all supported countries    |                    |
+| `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
 | `GET /api/{country}/tomorrow` | Tomorrow's prices (00:00-23:59) | `/api/de/tomorrow` |
-| `GET /api/{country}/next24h` | Next 24 hours from now | `/api/fr/next24h` |
+| `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
+
+### 🇳🇱 Netherlands Shortcuts (Backward Compatibility)
+
+| Endpoint            | Description          | Equivalent To      |
+| ------------------- | -------------------- | ------------------ |
+| `GET /api/today`    | Netherlands today    | `/api/nl/today`    |
+| `GET /api/tomorrow` | Netherlands tomorrow | `/api/nl/tomorrow` |
+| `GET /api/next/24`  | Netherlands next 24h | `/api/nl/next24h`  |
+
+### ⚙️ Advanced Endpoints
+
+| Endpoint                              | Description             |
+| ------------------------------------- | ----------------------- |
+| `GET /api/prices`                     | Current day prices (NL) |
+| `GET /api/prices/:startDate/:endDate` | Date range prices (NL)  |
+| `GET /api/next/:hours`                | Next N hours (NL, 1-48) |
+| `GET /api/forecast`                   | Forecast prices (NL)    |
+| `GET /api/current`                    | Current hour price (NL) |
 
 ### 🏢 Energy Provider Presets
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/providers` | List all providers |
-| `GET /api/providers/next-energy` | Next Energy preset (NL) |
+| Endpoint                                  | Description               |
+| ----------------------------------------- | ------------------------- |
+| `GET /api/providers`                      | List all providers        |
+| `GET /api/providers/next-energy`          | Next Energy preset (NL)   |
 | `GET /api/providers/{provider}/{country}` | Generic provider endpoint |
 
 ## 📊 Query Parameters
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `markup` or `fixedMarkup` | Number | Fixed markup per kWh | `0.024` |
-| `variableMarkup` | Number | Variable markup percentage | `5` (for 5%) |
-| `vat` | Number | VAT as decimal | `0.21` (for 21%) |
-| `autoVat` | Boolean | Use country's default VAT | `true` |
-| `roundTo` | Integer | Decimal places to round to | `5` (default) |
+| Parameter                 | Type    | Description                | Example          |
+| ------------------------- | ------- | -------------------------- | ---------------- |
+| `markup` or `fixedMarkup` | Number  | Fixed markup per kWh       | `0.024`          |
+| `variableMarkup`          | Number  | Variable markup percentage | `5` (for 5%)     |
+| `vat`                     | Number  | VAT as decimal             | `0.21` (for 21%) |
+| `autoVat`                 | Boolean | Use country's default VAT  | `true`           |
+| `roundTo`                 | Integer | Decimal places to round to | `5` (default)    |
 
 ## 💡 Usage Examples
 
 ### Basic Usage
+
 ```javascript
 // Get today's raw prices for Netherlands
 fetch('http://localhost:3000/api/nl/today')
@@ -105,6 +169,7 @@ fetch('http://localhost:3000/api/nl/today')
 ```
 
 ### With Next Energy Markup
+
 ```javascript
 // Next Energy pricing with VAT
 fetch('http://localhost:3000/api/nl/today?markup=0.024&vat=0.21')
@@ -117,11 +182,11 @@ fetch('http://localhost:3000/api/nl/today?markup=0.024&vat=0.21')
 ```
 
 ### Multi-Country Comparison
+
 ```javascript
 const countries = ['nl', 'de', 'fr', 'be'];
-const promises = countries.map(country => 
-  fetch(`http://localhost:3000/api/${country}/today?autoVat=true`)
-    .then(r => r.json())
+const promises = countries.map(country =>
+  fetch(`http://localhost:3000/api/${country}/today?autoVat=true`).then(r => r.json())
 );
 
 Promise.all(promises).then(results => {
@@ -163,7 +228,7 @@ const COUNTRIES = {
     stekkerRegion: 'GB',
     currency: 'GBP',
     timezone: 'Europe/London',
-    defaultVat: 0.20,
+    defaultVat: 0.2,
     locale: 'en-GB'
   }
 };
@@ -256,11 +321,50 @@ npm run dev
 # Edit config/countries.js
 ```
 
-## 🐛 Troubleshooting
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode (development)
+npm run test:watch
+
+# Run linting
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Validate API specification
+npm run validate-api
+```
+
+## 🔄 CI/CD
+
+The project includes a complete GitHub Actions workflow:
+
+- **Automated Testing** - Runs on Node.js 16, 18, and 20
+- **Code Quality** - ESLint, security audits, and coverage reports
+- **API Validation** - Validates OpenAPI specification
+- **Docker Build** - Builds and pushes Docker images
+- **Deployment** - Staging and production deployment workflows
+
+### GitHub Secrets Required:
+
+```bash
+DOCKER_USERNAME=your-docker-hub-username
+DOCKER_PASSWORD=your-docker-hub-password
+ENTSOE_API_KEY=your-entsoe-api-key
+```
 
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Kill process on port 3000
 pkill -f "node.*3000"
@@ -268,12 +372,14 @@ pkill -f "node.*3000"
 ```
 
 **Country not supported:**
+
 ```bash
 curl http://localhost:3000/api/countries
 # Check supported country codes
 ```
 
 **No price data:**
+
 - Check if it's a weekend (some markets have limited data)
 - Verify the date range is not too far in the future
 - Check if the upstream data source is available

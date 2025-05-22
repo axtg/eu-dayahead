@@ -19,7 +19,7 @@ class StekkerAPI {
 
       const start = dateStart || today;
       const end = dateEnd || tomorrow;
-      
+
       start.setMinutes(0, 0, 0);
       end.setDate(end.getDate() + 1); // Include full end day
 
@@ -27,14 +27,14 @@ class StekkerAPI {
       const endDate = end.toISOString();
 
       // Construct API path
-      let path = `/epex-forecast?advanced_view=&region=NL&unit=MWh`;
+      let path = '/epex-forecast?advanced_view=&region=NL&unit=MWh';
       if (!includeForecast) {
         path += `&filter_from=${startDate}&filter_to=${endDate}`;
       }
 
       const response = await this.makeRequest(path);
       const prices = this.parseResponse(response, start, end, includeForecast);
-      
+
       // Apply markup if provided
       return this.applyMarkup(prices, options);
     } catch (error) {
@@ -44,22 +44,22 @@ class StekkerAPI {
 
   applyMarkup(prices, options = {}) {
     const {
-      fixedMarkup = 0,        // Fixed markup in EUR/kWh (e.g., 0.024 for Next Energy)
-      variableMarkup = 0,     // Variable markup in % (e.g., 5 for 5%)
-      vat = 0,               // VAT as decimal (e.g., 0.21 for 21%)
-      includeVat = false,     // Backward compatibility
-      roundTo = 5            // Round to 5 decimal places
+      fixedMarkup = 0, // Fixed markup in EUR/kWh (e.g., 0.024 for Next Energy)
+      variableMarkup = 0, // Variable markup in % (e.g., 5 for 5%)
+      vat = 0, // VAT as decimal (e.g., 0.21 for 21%)
+      includeVat = false, // Backward compatibility
+      roundTo = 5 // Round to 5 decimal places
     } = options;
 
     // Determine VAT rate - use vat parameter if provided, otherwise check includeVat
-    const vatRate = vat > 0 ? vat : (includeVat ? 0.21 : 0);
+    const vatRate = vat > 0 ? vat : includeVat ? 0.21 : 0;
 
     return prices.map(hour => {
       let finalPrice = hour.price;
 
       // Apply variable markup (percentage)
       if (variableMarkup !== 0) {
-        finalPrice *= (1 + variableMarkup / 100);
+        finalPrice *= 1 + variableMarkup / 100;
       }
 
       // Apply fixed markup (EUR/kWh)
@@ -69,7 +69,7 @@ class StekkerAPI {
 
       // Apply VAT if specified
       if (vatRate > 0) {
-        finalPrice *= (1 + vatRate);
+        finalPrice *= 1 + vatRate;
       }
 
       // Round to specified decimal places
@@ -99,9 +99,9 @@ class StekkerAPI {
         timeout: this.timeout
       };
 
-      const req = https.request(options, (res) => {
+      const req = https.request(options, res => {
         let body = '';
-        res.on('data', chunk => body += chunk);
+        res.on('data', chunk => (body += chunk));
         res.on('end', () => {
           if (res.statusCode !== 200) {
             reject(new Error(`HTTP ${res.statusCode}: ${body}`));
@@ -124,7 +124,7 @@ class StekkerAPI {
 
     // Extract JSON data from the data-epex-forecast-graph-data-value attribute
     const dataAttributeMatch = htmlResponse.match(/data-epex-forecast-graph-data-value="([^"]+)"/);
-    
+
     if (!dataAttributeMatch) {
       throw new Error('Could not find price data attribute in HTML');
     }
@@ -144,9 +144,8 @@ class StekkerAPI {
     }
 
     // Find the Market price data (usually the 4th object with name "Market price")
-    const marketPriceData = plotlyData.find(series => 
-      series.name === 'Market price' || 
-      (series.name && series.name.includes('Market'))
+    const marketPriceData = plotlyData.find(
+      series => series.name === 'Market price' || (series.name && series.name.includes('Market'))
     );
 
     if (!marketPriceData || !marketPriceData.x || !marketPriceData.y) {
@@ -183,31 +182,31 @@ class StekkerAPI {
 // Usage Examples
 async function getDutchEnergyPrices() {
   const stekker = new StekkerAPI();
-  
+
   try {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     // Get raw market prices (EUR/kWh)
     const rawPrices = await stekker.getDutchPrices(today, tomorrow, false);
     console.log('Raw Market Prices (EUR/kWh):', JSON.stringify(rawPrices.slice(0, 3), null, 2));
-    
+
     // Get prices with Next Energy markup (0.024 EUR/kWh + 21% VAT)
     const nextEnergyPrices = await stekker.getDutchPrices(today, tomorrow, false, {
       fixedMarkup: 0.024,
       includeVat: true
     });
     console.log('Next Energy Prices (with markup + VAT):', JSON.stringify(nextEnergyPrices.slice(0, 3), null, 2));
-    
+
     // Get forecast prices with custom markup
     const customPrices = await stekker.getDutchPrices(null, null, true, {
-      fixedMarkup: 0.030,
+      fixedMarkup: 0.03,
       variableMarkup: 5, // 5%
       includeVat: true
     });
     console.log('Custom Markup Prices:', JSON.stringify(customPrices.slice(0, 3), null, 2));
-    
+
     return { rawPrices, nextEnergyPrices, customPrices };
   } catch (error) {
     console.error('Error fetching prices:', error.message);
@@ -219,10 +218,10 @@ async function getTodayPrices(markupOptions = {}) {
   const stekker = new StekkerAPI();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   return await stekker.getDutchPrices(today, tomorrow, false, markupOptions);
 }
 
@@ -232,13 +231,15 @@ module.exports = { StekkerAPI, getDutchEnergyPrices, getTodayPrices };
 // Quick test with Next Energy markup
 if (require.main === module) {
   getTodayPrices({
-    fixedMarkup: 0.024,  // Next Energy markup
-    includeVat: true     // Include 21% VAT
-  }).then(prices => {
-    console.log('Next Energy Prices (EUR/kWh with VAT):');
-    prices.forEach(price => {
-      const hour = new Date(price.time).getHours();
-      console.log(`${hour.toString().padStart(2, '0')}:00 - €${price.price.toFixed(5)}/kWh`);
-    });
-  }).catch(console.error);
+    fixedMarkup: 0.024, // Next Energy markup
+    includeVat: true // Include 21% VAT
+  })
+    .then(prices => {
+      console.log('Next Energy Prices (EUR/kWh with VAT):');
+      prices.forEach(price => {
+        const hour = new Date(price.time).getHours();
+        console.log(`${hour.toString().padStart(2, '0')}:00 - €${price.price.toFixed(5)}/kWh`);
+      });
+    })
+    .catch(console.error);
 }

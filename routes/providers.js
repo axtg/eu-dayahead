@@ -29,7 +29,6 @@ router.get('/next-energy', async (req, res) => {
       },
       fetchedAt: new Date().toISOString()
     });
-
   } catch (error) {
     res.status(500).json({
       status: 'error',
@@ -42,7 +41,7 @@ router.get('/next-energy', async (req, res) => {
 router.get('/:provider/:country', async (req, res) => {
   try {
     const { provider, country } = req.params;
-    
+
     // Define provider presets
     const PROVIDER_PRESETS = {
       'next-energy': {
@@ -50,12 +49,12 @@ router.get('/:provider/:country', async (req, res) => {
         countries: ['nl'],
         markup: { fixedMarkup: 0.024, vat: 0.21 }
       },
-      'vattenfall': {
+      vattenfall: {
         name: 'Vattenfall',
         countries: ['nl', 'de', 'se'],
-        markup: { fixedMarkup: 0.030, vat: 'auto' }
+        markup: { fixedMarkup: 0.03, vat: 'auto' }
       },
-      'eneco': {
+      eneco: {
         name: 'Eneco',
         countries: ['nl', 'be'],
         markup: { fixedMarkup: 0.028, vat: 'auto' }
@@ -63,7 +62,7 @@ router.get('/:provider/:country', async (req, res) => {
     };
 
     const providerConfig = PROVIDER_PRESETS[provider.toLowerCase()];
-    
+
     if (!providerConfig) {
       return res.status(404).json({
         status: 'error',
@@ -74,7 +73,9 @@ router.get('/:provider/:country', async (req, res) => {
     if (!providerConfig.countries.includes(country.toLowerCase())) {
       return res.status(400).json({
         status: 'error',
-        message: `Provider '${provider}' not available in ${country.toUpperCase()}. Available countries: ${providerConfig.countries.map(c => c.toUpperCase()).join(', ')}`
+        message:
+          `Provider '${provider}' not available in ${country.toUpperCase()}. ` +
+          `Available countries: ${providerConfig.countries.map(c => c.toUpperCase()).join(', ')}`
       });
     }
 
@@ -83,7 +84,7 @@ router.get('/:provider/:country', async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Apply auto VAT if specified
-    let markupOptions = { ...providerConfig.markup };
+    const markupOptions = { ...providerConfig.markup };
     if (markupOptions.vat === 'auto') {
       const { COUNTRIES } = require('../config/countries');
       markupOptions.vat = COUNTRIES[country.toLowerCase()].defaultVat;
@@ -98,7 +99,6 @@ router.get('/:provider/:country', async (req, res) => {
     };
 
     res.json(response);
-
   } catch (error) {
     res.status(500).json({
       status: 'error',
@@ -116,13 +116,13 @@ router.get('/', (req, res) => {
       markup: { fixed: '€0.024/kWh', vat: '21%' },
       endpoint: '/api/providers/next-energy'
     },
-    'vattenfall': {
+    vattenfall: {
       name: 'Vattenfall',
       countries: ['NL', 'DE', 'SE'],
       markup: { fixed: '€0.030/kWh', vat: 'auto' },
       endpoint: '/api/providers/vattenfall/{country}'
     },
-    'eneco': {
+    eneco: {
       name: 'Eneco',
       countries: ['NL', 'BE'],
       markup: { fixed: '€0.028/kWh', vat: 'auto' },

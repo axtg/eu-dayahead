@@ -2,9 +2,9 @@ openapi: 3.0.3
 info:
   title: European Energy Prices API
   description: |
-    A comprehensive REST API for fetching real-time electricity prices across 9 European countries, 
+    A comprehensive REST API for fetching real-time electricity prices across 9 European countries,
     with support for energy provider markups, VAT calculations, and flexible time periods.
-    
+
     ## Features
     - **9 European Countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
     - **Multiple Time Periods** - Today, tomorrow, next 24 hours, custom date ranges
@@ -12,7 +12,7 @@ info:
     - **Flexible VAT** - Country-specific VAT rates or custom percentages
     - **Multi-Currency** - EUR, CHF, DKK, NOK, SEK support
     - **Timezone Aware** - Proper timezone handling for each country
-    
+
     ## Data Sources
     - **Primary**: Stekker.app - European energy price aggregator
     - **Backup**: ENTSOE Transparency Platform - Official EU energy data
@@ -33,8 +33,6 @@ servers:
 tags:
   - name: Countries
     description: Country-specific energy price endpoints
-  - name: Legacy
-    description: Backward compatibility endpoints (Netherlands-focused)
   - name: Providers
     description: Energy provider preset endpoints
   - name: System
@@ -144,137 +142,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /api/today:
-    get:
-      tags:
-        - Legacy
-      summary: Get today's Netherlands energy prices
-      description: Backward compatibility endpoint - equivalent to /api/nl/today
-      parameters:
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Today's Netherlands energy prices
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PricesResponse'
-
-  /api/tomorrow:
-    get:
-      tags:
-        - Legacy
-      summary: Get tomorrow's Netherlands energy prices
-      description: Backward compatibility endpoint - equivalent to /api/nl/tomorrow
-      parameters:
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Tomorrow's Netherlands energy prices
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PricesResponse'
-
-  /api/prices/{startDate}/{endDate}:
-    get:
-      tags:
-        - Legacy
-      summary: Get energy prices for date range
-      description: Get Netherlands energy prices for a specific date range
-      parameters:
-        - name: startDate
-          in: path
-          required: true
-          description: Start date in YYYY-MM-DD format
-          schema:
-            type: string
-            format: date
-            example: "2025-05-23"
-        - name: endDate
-          in: path
-          required: true
-          description: End date in YYYY-MM-DD format
-          schema:
-            type: string
-            format: date
-            example: "2025-05-24"
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Energy prices for date range
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PricesResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/current:
-    get:
-      tags:
-        - Legacy
-      summary: Get current hour energy price
-      description: Get the energy price for the current hour (Netherlands)
-      parameters:
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Current hour energy price
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CurrentPriceResponse'
-        '404':
-          description: Current hour price not found
-
-  /api/next/{hours}:
-    get:
-      tags:
-        - Legacy
-      summary: Get next N hours of energy prices
-      description: Get energy prices for the next N hours from current time (Netherlands, 1-48 hours)
-      parameters:
-        - name: hours
-          in: path
-          required: true
-          description: Number of hours to fetch (1-48)
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 48
-            example: 8
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Next N hours of energy prices
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Next24HoursResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
   /api/providers:
     get:
       tags:
@@ -317,7 +184,7 @@ paths:
           schema:
             type: string
             enum: [next-energy, vattenfall, eneco]
-            example: "vattenfall"
+            example: 'vattenfall'
         - name: country
           in: path
           required: true
@@ -325,7 +192,7 @@ paths:
           schema:
             type: string
             pattern: '^[a-z]{2}$'
-            example: "de"
+            example: 'de'
       responses:
         '200':
           description: Provider pricing for country
@@ -345,12 +212,12 @@ components:
       in: path
       required: true
       description: |
-        Country code (ISO 3166-1 alpha-2). 
+        Country code (ISO 3166-1 alpha-2).
         Supported: nl, de, be, fr, at, ch, dk, no, se
       schema:
         type: string
         pattern: '^[a-z]{2}$'
-        example: "nl"
+        example: 'nl'
 
     FixedMarkup:
       name: markup
@@ -361,7 +228,7 @@ components:
         format: float
         minimum: 0
         example: 0.024
-      
+
     VariableMarkup:
       name: variableMarkup
       in: query
@@ -408,7 +275,7 @@ components:
       properties:
         status:
           type: string
-          example: "healthy"
+          example: 'healthy'
         timestamp:
           type: string
           format: date-time
@@ -421,7 +288,7 @@ components:
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         data:
           type: array
           items:
@@ -435,29 +302,29 @@ components:
       properties:
         code:
           type: string
-          example: "NL"
+          example: 'NL'
         name:
           type: string
-          example: "Netherlands"
+          example: 'Netherlands'
         currency:
           type: string
-          example: "EUR"
+          example: 'EUR'
         timezone:
           type: string
-          example: "Europe/Amsterdam"
+          example: 'Europe/Amsterdam'
         defaultVat:
           type: number
           example: 0.21
         vatPercent:
           type: string
-          example: "21%"
+          example: '21%'
 
     PricesResponse:
       type: object
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         country:
           $ref: '#/components/schemas/CountryInfo'
         data:
@@ -477,7 +344,7 @@ components:
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         country:
           $ref: '#/components/schemas/CountryInfo'
         data:
@@ -497,7 +364,7 @@ components:
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         country:
           $ref: '#/components/schemas/CountryInfo'
         data:
@@ -511,7 +378,7 @@ components:
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         data:
           type: array
           items:
@@ -525,10 +392,10 @@ components:
       properties:
         status:
           type: string
-          example: "success"
+          example: 'success'
         provider:
           type: string
-          example: "Next Energy"
+          example: 'Next Energy'
         country:
           $ref: '#/components/schemas/CountryInfo'
         data:
@@ -546,16 +413,16 @@ components:
       properties:
         code:
           type: string
-          example: "NL"
+          example: 'NL'
         name:
           type: string
-          example: "Netherlands"
+          example: 'Netherlands'
         currency:
           type: string
-          example: "EUR"
+          example: 'EUR'
         timezone:
           type: string
-          example: "Europe/Amsterdam"
+          example: 'Europe/Amsterdam'
 
     PriceData:
       type: object
@@ -564,7 +431,7 @@ components:
           type: string
           format: date-time
           description: ISO 8601 timestamp
-          example: "2025-05-23T00:00:00.000Z"
+          example: '2025-05-23T00:00:00.000Z'
         priceRaw:
           type: number
           format: float
@@ -578,11 +445,11 @@ components:
         hour:
           type: string
           description: Local time in HH:MM format
-          example: "02:00"
+          example: '02:00'
         localTime:
           type: string
           description: Formatted local time
-          example: "02:00"
+          example: '02:00'
         markup:
           $ref: '#/components/schemas/MarkupDetails'
 
@@ -597,7 +464,7 @@ components:
               example: 0
             dayOfWeek:
               type: string
-              example: "Friday"
+              example: 'Friday'
 
     CurrentPriceData:
       type: object
@@ -605,7 +472,7 @@ components:
         hour:
           type: string
           format: date-time
-          example: "2025-05-23T14:00:00.000Z"
+          example: '2025-05-23T14:00:00.000Z'
         price:
           type: number
           format: float
@@ -616,10 +483,10 @@ components:
           example: 87.12
         currency:
           type: string
-          example: "EUR"
+          example: 'EUR'
         unit:
           type: string
-          example: "kWh"
+          example: 'kWh'
         markup:
           $ref: '#/components/schemas/MarkupDetails'
 
@@ -628,27 +495,27 @@ components:
       properties:
         id:
           type: string
-          example: "next-energy"
+          example: 'next-energy'
         name:
           type: string
-          example: "Next Energy"
+          example: 'Next Energy'
         countries:
           type: array
           items:
             type: string
-          example: ["NL"]
+          example: ['NL']
         markup:
           type: object
           properties:
             fixed:
               type: string
-              example: "€0.024/kWh"
+              example: '€0.024/kWh'
             vat:
               type: string
-              example: "21%"
+              example: '21%'
         endpoint:
           type: string
-          example: "/api/providers/next-energy"
+          example: '/api/providers/next-energy'
 
     MarkupInfo:
       type: object
@@ -683,7 +550,7 @@ components:
           example: 0.21
         vatPercent:
           type: string
-          example: "21%"
+          example: '21%'
         originalPrice:
           type: number
           example: 0.08712
@@ -699,29 +566,29 @@ components:
           example: 0.21
         vatPercent:
           type: string
-          example: "21%"
+          example: '21%'
         description:
           type: string
-          example: "Next Energy standard markup with Dutch VAT"
+          example: 'Next Energy standard markup with Dutch VAT'
 
     ResponseInfo:
       type: object
       properties:
         type:
           type: string
-          example: "today"
+          example: 'today'
         date:
           type: string
-          example: "22-5-2025"
+          example: '22-5-2025'
         totalHours:
           type: integer
           example: 24
         priceUnit:
           type: string
-          example: "EUR/kWh"
+          example: 'EUR/kWh'
         timezone:
           type: string
-          example: "Europe/Amsterdam"
+          example: 'Europe/Amsterdam'
 
     ExtendedResponseInfo:
       allOf:
@@ -731,21 +598,21 @@ components:
             startTime:
               type: string
               format: date-time
-              example: "2025-05-23T12:00:00.000Z"
+              example: '2025-05-23T12:00:00.000Z'
             endTime:
               type: string
               format: date-time
-              example: "2025-05-24T12:00:00.000Z"
+              example: '2025-05-24T12:00:00.000Z'
 
     ErrorResponse:
       type: object
       properties:
         status:
           type: string
-          example: "error"
+          example: 'error'
         message:
           type: string
-          example: "Unsupported country: xx. Use /api/countries to see supported countries."
+          example: 'Unsupported country: xx. Use /api/countries to see supported countries.'
 
   responses:
     BadRequest:
@@ -766,23 +633,23 @@ components:
     NetherlandsToday:
       summary: Netherlands today with Next Energy markup
       value:
-        status: "success"
+        status: 'success'
         country:
-          code: "NL"
-          name: "Netherlands"
-          currency: "EUR"
-          timezone: "Europe/Amsterdam"
+          code: 'NL'
+          name: 'Netherlands'
+          currency: 'EUR'
+          timezone: 'Europe/Amsterdam'
         data:
-          - time: "2025-05-23T00:00:00.000Z"
+          - time: '2025-05-23T00:00:00.000Z'
             priceRaw: 87.12
             price: 0.13442
-            hour: "02:00"
-            localTime: "02:00"
+            hour: '02:00'
+            localTime: '02:00'
             markup:
               fixed: 0.024
               variable: 0
               vat: 0.21
-              vatPercent: "21%"
+              vatPercent: '21%'
               originalPrice: 0.08712
         markup:
           fixedMarkup: 0.024
@@ -790,10 +657,10 @@ components:
           vat: 0.21
           includeVat: true
           roundTo: 5
-        fetchedAt: "2025-05-22T13:08:42.000Z"
+        fetchedAt: '2025-05-22T13:08:42.000Z'
         info:
-          type: "today"
-          date: "22-5-2025"
+          type: 'today'
+          date: '22-5-2025'
           totalHours: 24
-          priceUnit: "EUR/kWh"
-          timezone: "Europe/Amsterdam"
+          priceUnit: 'EUR/kWh'
+          timezone: 'Europe/Amsterdam'
