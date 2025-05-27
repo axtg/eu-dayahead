@@ -1,15 +1,19 @@
-# 🌍 European Energy Prices API
+[![CI/CD Pipeline](https://github.com/axtg/eu-dayahead/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/axtg/eu-dayahead/actions/workflows/ci.yml)
 
-A comprehensive REST API for fetching real-time electricity prices across 9 European countries, with support for energy provider markups, VAT calculations, and flexible time periods.
+[!["Buy me a coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/xander.groesbeek)
+
+# 🌍 European energy prices API
+
+A comprehensive REST API for fetching real-time electricity prices across 9 EU countries, with support for energy provider markups, VAT calculations, and flexible time periods.
 
 ## 🚀 Features
 
-- **9 European Countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
-- **Multiple Time Periods** - Today, tomorrow, next 24 hours, custom date ranges
-- **Provider Markups** - Built-in support for energy provider pricing (Next Energy, Vattenfall, Eneco)
+- **9 European countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
+- **Multiple time periods** - Today, tomorrow, next 24 hours, custom date ranges
+- **Provider markups** - Built-in support for energy provider pricing (Next Energy, Vattenfall, Eneco)
 - **Flexible VAT** - Country-specific VAT rates or custom percentages
-- **Multi-Currency** - EUR, CHF, DKK, NOK, SEK support
-- **Timezone Aware** - Proper timezone handling for each country
+- **Multi-currency** - EUR, CHF, DKK, NOK, SEK support
+- **Timezone aware** - Proper timezone handling for each country
 - **Clean REST API** - Intuitive `/api/{country}/{timeframe}` structure
 
 ## 📦 Installation
@@ -35,7 +39,7 @@ npm start
 npm run dev
 ```
 
-### 🔑 Environment Variables
+### 🔑 Environment variables
 
 Create a `.env` file based on `.env.example`:
 
@@ -52,14 +56,14 @@ CACHE_TIMEOUT_MS=3600000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-**Getting an ENTSOE API Key (Recommended):**
+**Getting an ENTSOE API Key (recommended):**
 
 1. Register at [ENTSOE Transparency Platform](https://transparency.entsoe.eu/)
 2. Request API access (free, takes 1-3 business days)
 3. Add your API key to `.env`
 4. Restart the server - it will automatically use ENTSOE as primary data source
 
-### 🐳 Docker Setup
+### 🐳 Docker setup
 
 ```bash
 # Build and run with Docker
@@ -70,7 +74,7 @@ docker run -p 3000:3000 eu-energy-api
 docker-compose up -d
 ```
 
-## 🌍 Supported Countries
+## 🌍 Supported countries
 
 | Code | Country     | Currency | Default VAT | Timezone          |
 | ---- | ----------- | -------- | ----------- | ----------------- |
@@ -84,35 +88,35 @@ docker-compose up -d
 | `no` | Norway      | NOK      | 25%         | Europe/Oslo       |
 | `se` | Sweden      | SEK      | 25%         | Europe/Stockholm  |
 
-## 🎯 Quick Start Examples
+## 🎯 Quick start examples
 
-### Get Today's Prices for Netherlands
+### Get today's prices for Netherlands
 
 ```bash
 curl http://localhost:3000/api/nl/today
 ```
 
-### Get Tomorrow's Prices with Next Energy Markup
+### Get tomorrow's prices with Next Energy markup
 
 ```bash
 curl "http://localhost:3000/api/nl/tomorrow?markup=0.024&vat=0.21"
 ```
 
-### Get German Prices with Auto VAT
+### Get German prices with 'auto VAT'
 
 ```bash
 curl "http://localhost:3000/api/de/today?autoVat=true"
 ```
 
-### List All Supported Countries
+### List all supported countries
 
 ```bash
 curl http://localhost:3000/api/countries
 ```
 
-## 📋 API Endpoints
+## 📋 API endpoints
 
-### 🎯 Country-Specific Endpoints (Recommended)
+### 🎯 Country-specific endpoints (recommended)
 
 | Endpoint                      | Description                     | Example            |
 | ----------------------------- | ------------------------------- | ------------------ |
@@ -121,7 +125,7 @@ curl http://localhost:3000/api/countries
 | `GET /api/{country}/tomorrow` | Tomorrow's prices (00:00-23:59) | `/api/de/tomorrow` |
 | `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next/24`  |
 
-### 🇳🇱 Netherlands Shortcuts (Backward Compatibility)
+### 🇳🇱 Netherlands shortcuts 
 
 | Endpoint            | Description          | Equivalent To      |
 | ------------------- | -------------------- | ------------------ |
@@ -129,7 +133,7 @@ curl http://localhost:3000/api/countries
 | `GET /api/tomorrow` | Netherlands tomorrow | `/api/nl/tomorrow` |
 | `GET /api/next/24`  | Netherlands next 24h |                    |
 
-### 🏢 Energy Provider Presets
+### 🏢 Energy provider presets
 
 | Endpoint                                  | Description               |
 | ----------------------------------------- | ------------------------- |
@@ -137,7 +141,7 @@ curl http://localhost:3000/api/countries
 | `GET /api/providers/next-energy`          | Next Energy preset (NL)   |
 | `GET /api/providers/{provider}/{country}` | Generic provider endpoint |
 
-## 📊 Query Parameters
+## 📊 Query parameters
 
 | Parameter                 | Type    | Description                | Example          |
 | ------------------------- | ------- | -------------------------- | ---------------- |
@@ -146,9 +150,9 @@ curl http://localhost:3000/api/countries
 | `autoVat`                 | Boolean | Use country's default VAT  | `true`           |
 | `roundTo`                 | Integer | Decimal places to round to | `5` (default)    |
 
-## 💡 Usage Examples
+## 💡 Usage examples
 
-### Basic Usage
+### Basic usage
 
 ```javascript
 // Get today's raw prices for Netherlands
@@ -157,7 +161,7 @@ fetch('http://localhost:3000/api/nl/today')
   .then(data => console.log(data));
 ```
 
-### With Next Energy Markup
+### With Next Energy markup
 
 ```javascript
 // Next Energy pricing with VAT
@@ -170,7 +174,7 @@ fetch('http://localhost:3000/api/nl/today?markup=0.024&vat=0.21')
   });
 ```
 
-### Multi-Country Comparison
+### Multi-country comparison
 
 ```javascript
 const countries = ['nl', 'de', 'fr', 'be'];
@@ -185,7 +189,7 @@ Promise.all(promises).then(results => {
 });
 ```
 
-## 🏗️ Project Structure
+## 🏗️ Project structure
 
 ```
 ├── index.js              # Main server file
@@ -204,7 +208,7 @@ Promise.all(promises).then(results => {
 
 ## 🔧 Configuration
 
-### Adding New Countries
+### Adding new countries
 
 Edit `config/countries.js`:
 
@@ -223,7 +227,7 @@ const COUNTRIES = {
 };
 ```
 
-### Adding New Energy Providers
+### Adding new energy providers
 
 Edit `routes/providers.js`:
 
@@ -238,7 +242,7 @@ const PROVIDER_PRESETS = {
 };
 ```
 
-## 📈 Response Format
+## 📈 Response format
 
 ```json
 {
@@ -283,7 +287,7 @@ const PROVIDER_PRESETS = {
 }
 ```
 
-## 🔗 Data Sources
+## 🔗 Data sources
 
 - **Primary**: [ENTSOE Transparency Platform](https://transparency.entsoe.eu) - Official EU energy data (requires API key)
 - **Backup**: [Stekker.app](https://stekker.app) - European energy price aggregator
@@ -342,13 +346,13 @@ The project includes a complete GitHub Actions workflow:
 - **Docker Build** - Builds and pushes Docker images
 - **Deployment** - Staging and production deployment workflows
 
-### GitHub Secrets Required:
+### GitHub secrets required:
 
 ```bash
 ENTSOE_API_KEY=your-entsoe-api-key
 ```
 
-### Common Issues
+### Common issues
 
 **Port already in use:**
 
