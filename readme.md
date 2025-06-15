@@ -9,7 +9,7 @@ A comprehensive REST API for fetching real-time electricity prices across 9 EU c
 ## 🚀 Features
 
 - **9 European countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
-- **Multiple time periods** - Today, tomorrow, next 24 hours, custom date ranges
+- **Multiple time periods** - Today, next 24 hours, custom date ranges
 - **Provider markups** - Built-in support for energy provider pricing (Next Energy, Vattenfall, Eneco)
 - **Flexible VAT** - Country-specific VAT rates or custom percentages
 - **Multi-currency** - EUR, CHF, DKK, NOK, SEK support
