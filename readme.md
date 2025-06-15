@@ -20,7 +20,7 @@ A comprehensive REST API for fetching real-time electricity prices across 9 EU c
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/eu-dayahead.git
+git clone https://github.com/axtg/eu-dayahead.git
 cd eu-dayahead
 
 # Install dependencies
@@ -70,8 +70,8 @@ RATE_LIMIT_MAX_REQUESTS=100
 docker build -t eu-energy-api .
 docker run -p 3000:3000 eu-energy-api
 
-# Or use Docker Compose
-docker-compose up -d
+# Or use Docker compose
+docker compose up -d
 ```
 
 ## 🌍 Supported countries
