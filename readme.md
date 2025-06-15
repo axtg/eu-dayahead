@@ -96,10 +96,10 @@ docker compose up -d
 curl http://localhost:3000/api/nl/today
 ```
 
-### Get tomorrow's prices with Next Energy markup
+### Get today's prices with Next Energy markup
 
 ```bash
-curl "http://localhost:3000/api/nl/tomorrow?markup=0.024&vat=0.21"
+curl "http://localhost:3000/api/nl/today?markup=0.024&vat=0.21"
 ```
 
 ### Get German prices with 'auto VAT'
@@ -122,7 +122,6 @@ curl http://localhost:3000/api/countries
 | ----------------------------- | ------------------------------- | ------------------ |
 | `GET /api/countries`          | List all supported countries    |                    |
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
-| `GET /api/{country}/tomorrow` | Tomorrow's prices (00:00-23:59) | `/api/de/tomorrow` |
 | `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next/24`  |
 
 ### 🇳🇱 Netherlands shortcuts 
@@ -130,7 +129,6 @@ curl http://localhost:3000/api/countries
 | Endpoint            | Description          | Equivalent To      |
 | ------------------- | -------------------- | ------------------ |
 | `GET /api/today`    | Netherlands today    | `/api/nl/today`    |
-| `GET /api/tomorrow` | Netherlands tomorrow | `/api/nl/tomorrow` |
 | `GET /api/next/24`  | Netherlands next 24h |                    |
 
 ### 🏢 Energy provider presets
