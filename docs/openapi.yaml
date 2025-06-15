@@ -92,31 +92,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /api/{country}/tomorrow:
-    get:
-      tags:
-        - Countries
-      summary: Get tomorrow's energy prices
-      description: Get energy prices for a specific country from 00:00 to 23:59 of the next day
-      parameters:
-        - $ref: '#/components/parameters/CountryPath'
-        - $ref: '#/components/parameters/FixedMarkup'
-        - $ref: '#/components/parameters/VariableMarkup'
-        - $ref: '#/components/parameters/VAT'
-        - $ref: '#/components/parameters/AutoVAT'
-        - $ref: '#/components/parameters/RoundTo'
-      responses:
-        '200':
-          description: Tomorrow's energy prices
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PricesResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /api/{country}/next24h:
     get:
       tags:

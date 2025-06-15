@@ -65,15 +65,6 @@ describe('European Energy Prices API', () => {
       }
     }, 15000); // Extended timeout for API calls
 
-    test('GET /api/de/tomorrow should return German energy prices', async () => {
-      const response = await request(app).get('/api/de/tomorrow').expect(200);
-
-      expect(response.body).toHaveProperty('status', 'success');
-      expect(response.body).toHaveProperty('country');
-      expect(response.body.country).toHaveProperty('code', 'DE');
-      expect(response.body.country).toHaveProperty('currency', 'EUR');
-    }, 15000);
-
     test('GET /api/xx/today should return 400 for unsupported country', async () => {
       const response = await request(app).get('/api/xx/today').expect(400);
 
