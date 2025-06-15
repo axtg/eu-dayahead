@@ -69,50 +69,6 @@ router.get('/:country/today', async (req, res) => {
   }
 });
 
-// Get tomorrow's prices for a specific country (00:00 - 23:59)
-router.get('/:country/tomorrow', async (req, res) => {
-  try {
-    const countryCode = validateCountry(req.params.country);
-    if (!countryCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Unsupported country: ${req.params.country}. Use /api/countries to see supported countries.`
-      });
-    }
-
-    const country = COUNTRIES[countryCode];
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
-
-    // Get tomorrow's start and end in country's timezone
-    const now = new Date();
-    const today = new Date(now.toLocaleString('en-US', { timeZone: country.timezone }));
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const tomorrowStart = new Date(tomorrow);
-    tomorrowStart.setHours(0, 0, 0, 0);
-
-    const tomorrowEnd = new Date(tomorrow);
-    tomorrowEnd.setHours(23, 59, 59, 999);
-
-    const prices = await fetchCountryPrices(countryCode, tomorrowStart, tomorrowEnd, false, markupOptions);
-    const enrichedPrices = enrichPricesWithCountryInfo(prices, countryCode);
-
-    const response = buildCountryResponse(countryCode, enrichedPrices, markupOptions, 'tomorrow', {
-      date: tomorrow.toLocaleDateString(country.locale, { timeZone: country.timezone })
-    });
-
-    res.json(response);
-  } catch (error) {
-    console.error(`Error fetching ${req.params.country} tomorrow prices:`, error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
-  }
-});
-
 // Get next 24 hours for a specific country
 router.get('/:country/next24h', async (req, res) => {
   try {
