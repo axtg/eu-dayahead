@@ -146,28 +146,151 @@ describe('European Energy Prices API', () => {
     });
   });
 
-  // TODO: Re-enable timezone tests after fixing local dev timezone issues
-  describe.skip('Regression Tests - Timezone and Hour Count Bugs', () => {
+  describe('Regression Tests - Timezone and Hour Count Bugs', () => {
     describe('Today Endpoint - Hour Count Bug', () => {
-      test.todo('GET /api/nl/today should return exactly 24 hours - TODO: Fix timezone test for local dev');
-      test.todo('GET /api/de/today should return exactly 24 hours for Germany - TODO: Fix timezone test for local dev');
-      test.todo('Today endpoint should return all 24 hours exactly once (timezone-agnostic) - TODO: Fix timezone test for local dev');
+      test('GET /api/nl/today should return exactly 24 hours', async () => {
+        const response = await request(app).get('/api/nl/today').expect(200);
+
+        expect(response.body).toHaveProperty('status', 'success');
+        expect(response.body).toHaveProperty('data');
+        expect(Array.isArray(response.body.data)).toBe(true);
+
+        // Critical: Should return exactly 24 hours, not 46+ hours
+        expect(response.body.data.length).toBe(24);
+        expect(response.body.info.totalHours).toBe(24);
+      }, 15000);
+
+      test('GET /api/de/today should return exactly 24 hours for Germany', async () => {
+        const response = await request(app).get('/api/de/today').expect(200);
+
+        expect(response.body.data.length).toBe(24);
+        expect(response.body.info.totalHours).toBe(24);
+      }, 15000);
+
+      test('Today endpoint should return all 24 hours exactly once (timezone-agnostic)', async () => {
+        const response = await request(app).get('/api/nl/today').expect(200);
+
+        expect(response.body.data.length).toBe(24);
+
+        // Check that we have all hours from 00:00 to 23:00
+        const hours = response.body.data.map(entry => entry.hour);
+        const expectedHours = Array.from({ length: 24 }, (_, i) =>
+          `${i.toString().padStart(2, '0')}:00`
+        );
+
+        // Sort both arrays to handle potential timezone-related ordering issues
+        const sortedHours = [...hours].sort();
+        const sortedExpected = [...expectedHours].sort();
+
+        expect(sortedHours).toEqual(sortedExpected);
+
+        // Verify we have exactly one of each hour (no duplicates)
+        const hourCounts = {};
+        hours.forEach(hour => {
+          hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+        });
+
+        // Each hour should appear exactly once
+        Object.values(hourCounts).forEach(count => {
+          expect(count).toBe(1);
+        });
+
+        // Verify all expected hours are present
+        expectedHours.forEach(expectedHour => {
+          expect(hours).toContain(expectedHour);
+        });
+      }, 15000);
     });
 
     describe('Next24h Endpoint - Timezone Bug', () => {
-      test.todo('GET /api/nl/next24h should return exactly 24 hours - TODO: Fix timezone test for local dev');
-      test.todo('Next24h should start with hourFromNow: 0 for current hour - TODO: Fix timezone test for local dev');
-      test.todo('Next24h should work correctly across different timezones - TODO: Fix timezone test for local dev');
+      test('GET /api/nl/next24h should start from current hour with correct timezone', async () => {
+        const response = await request(app).get('/api/nl/next24h').expect(200);
+
+        expect(response.body).toHaveProperty('status', 'success');
+        expect(response.body).toHaveProperty('data');
+        expect(Array.isArray(response.body.data)).toBe(true);
+
+        // Should have at least some hours (may be less than 24 due to data availability)
+        expect(response.body.data.length).toBeGreaterThan(0);
+
+        // First entry should be the current hour with hourFromNow: 0
+        const firstEntry = response.body.data[0];
+        expect(firstEntry).toHaveProperty('hourFromNow', 0);
+      }, 15000);
+
+      test('Next24h should start with hourFromNow: 0 for current hour', async () => {
+        const response = await request(app).get('/api/nl/next24h').expect(200);
+
+        expect(response.body.data.length).toBeGreaterThan(0);
+
+        // First entry should be the current hour with hourFromNow: 0
+        const firstEntry = response.body.data[0];
+        expect(firstEntry).toHaveProperty('hourFromNow', 0);
+
+        // Check that hourFromNow increments correctly for available hours
+        for (let i = 0; i < Math.min(5, response.body.data.length); i++) {
+          expect(response.body.data[i].hourFromNow).toBe(i);
+        }
+      }, 15000);
+
+      test('Next24h should work correctly across different timezones', async () => {
+        // Test multiple countries with different timezones
+        const countries = ['nl', 'de', 'ch']; // Netherlands (CEST), Germany (CEST), Switzerland (CEST)
+
+        for (const country of countries) {
+          const response = await request(app).get(`/api/${country}/next24h`).expect(200);
+
+          expect(response.body.data.length).toBeGreaterThan(0);
+          expect(response.body.data[0].hourFromNow).toBe(0);
+        }
+      }, 30000);
     });
 
     describe('Next/N Hours Endpoint - Timezone Bug', () => {
-      test.todo('GET /api/nl/next/3 should return exactly 3 hours starting from current hour - TODO: Fix timezone test for local dev');
-      test.todo('GET /api/nl/next/1 should return exactly 1 hour (current hour) - TODO: Fix timezone test for local dev');
+      test('GET /api/nl/next/3 should return exactly 3 hours starting from current hour', async () => {
+        const response = await request(app).get('/api/nl/next/3').expect(200);
+
+        expect(response.body).toHaveProperty('status', 'success');
+        expect(response.body.data.length).toBe(3);
+        expect(response.body.info.totalHours).toBe(3);
+        expect(response.body.info.requestedHours).toBe(3);
+        expect(response.body.info.actualHours).toBe(3);
+
+        // Should start with hourFromNow: 0
+        expect(response.body.data[0].hourFromNow).toBe(0);
+        expect(response.body.data[1].hourFromNow).toBe(1);
+        expect(response.body.data[2].hourFromNow).toBe(2);
+      }, 15000);
+
+      test('GET /api/nl/next/1 should return exactly 1 hour (current hour)', async () => {
+        const response = await request(app).get('/api/nl/next/1').expect(200);
+
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].hourFromNow).toBe(0);
+      }, 15000);
     });
 
     describe('Timezone Consistency', () => {
-      test.todo('All endpoints should use target country timezone, not server timezone - TODO: Fix timezone test for local dev');
-      test.todo('Different countries should use their respective timezones - TODO: Fix timezone test for local dev');
+      test('All endpoints should use target country timezone, not server timezone', async () => {
+        const todayResponse = await request(app).get('/api/nl/today').expect(200);
+        const next24hResponse = await request(app).get('/api/nl/next24h').expect(200);
+
+        // Both should use Netherlands timezone
+        expect(todayResponse.body.country.timezone).toBe('Europe/Amsterdam');
+        expect(next24hResponse.body.country.timezone).toBe('Europe/Amsterdam');
+
+        // Time calculations should be consistent with the target timezone
+        expect(todayResponse.body.info.timezone).toBe('Europe/Amsterdam');
+        expect(next24hResponse.body.info.timezone).toBe('Europe/Amsterdam');
+      }, 15000);
+
+      test('Different countries should use their respective timezones', async () => {
+        const nlResponse = await request(app).get('/api/nl/today').expect(200);
+        const chResponse = await request(app).get('/api/ch/today').expect(200);
+
+        expect(nlResponse.body.country.timezone).toBe('Europe/Amsterdam');
+        expect(chResponse.body.country.timezone).toBe('Europe/Zurich');
+      }, 15000);
     });
   });
 });
