@@ -7,7 +7,7 @@ info:
 
     ## Features
     - **9 European Countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
-    - **Multiple Time Periods** - Today, tomorrow, next 24 hours, custom date ranges
+    - **Multiple Time Periods** - Today, next 24 hours, custom date ranges
     - **Provider Markups** - Built-in support for energy provider pricing
     - **Flexible VAT** - Country-specific VAT rates or custom percentages
     - **Multi-Currency** - EUR, CHF, DKK, NOK, SEK support
@@ -27,7 +27,7 @@ info:
 servers:
   - url: http://localhost:3000
     description: Development server
-  - url: https://your-api-domain.com
+  - url: https://dap.xadi.eu
     description: Production server
 
 tags:
@@ -55,6 +55,7 @@ paths:
 
   /api/countries:
     get:
+      operationId: get_api_countries
       tags:
         - Countries
       summary: List supported countries
@@ -69,6 +70,7 @@ paths:
 
   /api/{country}/today:
     get:
+      operationId: get_api__country__today
       tags:
         - Countries
       summary: Get today's energy prices
@@ -94,6 +96,7 @@ paths:
 
   /api/{country}/next24h:
     get:
+      operationId: get_api__country__next24h
       tags:
         - Countries
       summary: Get next 24 hours of energy prices
@@ -133,6 +136,7 @@ paths:
 
   /api/providers/next-energy:
     get:
+      operationId: get_api_providers_next_energy
       tags:
         - Providers
       summary: Next Energy pricing preset

@@ -1,15 +1,29 @@
 // routes/providers.js - Energy provider preset routes
 const express = require('express');
 const router = express.Router();
+const { fromZonedTime, toZonedTime } = require('date-fns-tz');
+const { startOfDay, endOfDay, addDays } = require('date-fns');
 
 const { fetchCountryPrices, buildCountryResponse } = require('../utils/helpers');
 
 // Next Energy preset (Netherlands)
 router.get('/next-energy', async (req, res) => {
   try {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { COUNTRIES } = require('../config/countries');
+    const country = COUNTRIES.nl;
+    const now = new Date();
+
+    // Get today and tomorrow in Netherlands timezone using date-fns-tz
+    // Convert current UTC time to Netherlands timezone
+    const nowInTargetTz = toZonedTime(now, country.timezone);
+
+    // Get start of today and end of tomorrow in target timezone
+    const todayStartInTargetTz = startOfDay(nowInTargetTz);
+    const tomorrowEndInTargetTz = endOfDay(addDays(nowInTargetTz, 1));
+
+    // Convert back to UTC for API processing
+    const today = fromZonedTime(todayStartInTargetTz, country.timezone);
+    const tomorrow = fromZonedTime(tomorrowEndInTargetTz, country.timezone);
 
     const prices = await fetchCountryPrices('nl', today, tomorrow, false, {
       fixedMarkup: 0.024,
@@ -79,15 +93,27 @@ router.get('/:provider/:country', async (req, res) => {
       });
     }
 
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get today and tomorrow in the target country's timezone
+    const { COUNTRIES } = require('../config/countries');
+    const countryConfig = COUNTRIES[country.toLowerCase()];
+    const now = new Date();
+
+    // Get today and tomorrow in target country timezone using date-fns-tz
+    // Convert current UTC time to target timezone
+    const nowInTargetTz = toZonedTime(now, countryConfig.timezone);
+
+    // Get start of today and end of tomorrow in target timezone
+    const todayStartInTargetTz = startOfDay(nowInTargetTz);
+    const tomorrowEndInTargetTz = endOfDay(addDays(nowInTargetTz, 1));
+
+    // Convert back to UTC for API processing
+    const today = fromZonedTime(todayStartInTargetTz, countryConfig.timezone);
+    const tomorrow = fromZonedTime(tomorrowEndInTargetTz, countryConfig.timezone);
 
     // Apply auto VAT if specified
     const markupOptions = { ...providerConfig.markup };
     if (markupOptions.vat === 'auto') {
-      const { COUNTRIES } = require('../config/countries');
-      markupOptions.vat = COUNTRIES[country.toLowerCase()].defaultVat;
+      markupOptions.vat = countryConfig.defaultVat;
     }
 
     const prices = await fetchCountryPrices(country.toLowerCase(), today, tomorrow, false, markupOptions);
