@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EU Day-Ahead Power Prices — Netherlands default</title>
+    <meta name="description" content="Interactive EU day-ahead power prices for the next 24 hours and today. Compare countries, add markup and VAT. Netherlands by default.">
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="canonical" href="/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="EU Day-Ahead Power Prices" />
+    <meta property="og:description" content="Interactive EU day-ahead power prices. Netherlands default. Add markup and VAT." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="/" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="EU Day-Ahead Power Prices" />
+    <meta name="twitter:description" content="Interactive EU day-ahead power prices. Netherlands default. Add markup and VAT." />
+
+    <!-- JSON-LD (Website) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "EU Day-Ahead Power Prices",
+        "url": "/"
+      }
+    </script>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#111827' // near black
+              },
+              secondary: {
+                DEFAULT: '#6B7280' // neutral gray
+              },
+              surface: {
+                DEFAULT: '#F9FAFB', // subtle off-white background
+                muted: '#F3F4F6'
+              }
+            },
+            boxShadow: {
+              soft: '0 10px 30px -12px rgba(0,0,0,0.15)'
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+    <link rel="preload" href="/app.js" as="script" />
+    <link rel="preload" href="/styles.css" as="style" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="bg-surface text-primary antialiased">
+    <noscript>
+      <div class="bg-yellow-50 text-yellow-800 p-4 text-center">
+        This page requires JavaScript to load the interactive chart.
+      </div>
+    </noscript>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-screen flex flex-col overflow-hidden">
+      <section class="pt-4 pb-4">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="h-9 w-36 rounded-md bg-gray-100 grid place-items-center text-xs text-gray-500 shrink-0">
+              Logo placeholder
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight truncate">
+              European power prices (day-ahead)
+            </h1>
+          </div>
+        </div>
+      </section>
+
+      <!-- Controls -->
+      <section aria-label="Chart controls" class="mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-2">
+          <label class="block">
+            <span class="block text-xs text-secondary mb-1">Country</span>
+            <select id="country" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black">
+              <!-- populated by JS -->
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-secondary mb-1">Markup (euro cents/kWh)</span>
+            <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-secondary mb-1">Tax (VAT %)</span>
+            <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+          </label>
+
+          <div class="block min-w-0 md:col-span-2 lg:col-span-2">
+            <span class="block text-xs text-secondary mb-1">Timeframe</span>
+            <div class="flex w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm" role="group" aria-label="Timeframe switch">
+              <button id="tfToday" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
+              <button id="tfNext24h" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white focus:ring-2 focus:ring-black" aria-pressed="true">Next 24 hours</button>
+            </div>
+            <input type="hidden" id="timeframe" value="next24h" />
+          </div>
+
+          <!-- API URL action as 5th control -->
+          <div class="block min-w-0">
+            <span class="block text-xs text-secondary mb-1">Copy</span>
+            <button id="copyBtn" type="button" class="w-full inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-900 hover:bg-gray-50 focus:ring-2 focus:ring-black">Copy</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chart Card -->
+      <section class="rounded-2xl bg-white shadow-soft ring-1 ring-black/5 h-[67vh] shrink-0">
+        <div class="p-4 sm:p-5 h-full flex flex-col">
+          <div class="flex items-baseline justify-between shrink-0">
+            <div>
+              <h2 class="text-lg font-medium">Price graph</h2>
+              <p id="unitLabel" class="mt-1 text-sm text-secondary">EUR/kWh</p>
+            </div>
+            <div id="legend" class="text-xs text-secondary hidden sm:block">
+              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#065f46"></span> Cheapest</span>
+              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#10b981"></span> 2nd Cheapest</span>
+              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#eab308"></span> Mid</span>
+              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#f59e0b"></span> 2nd Most Expensive</span>
+              <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#7f1d1d"></span> Most Expensive</span>
+            </div>
+          </div>
+          <div class="mt-4 flex-1 min-h-0">
+            <canvas id="priceChart" class="h-full w-full" aria-label="Day-ahead price chart" role="img"></canvas>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- Live region for errors -->
+      <section aria-live="polite" aria-atomic="true" class="sr-only">
+        <div id="statusMessage"></div>
+      </section>
+    </main>
+
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
+

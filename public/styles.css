@@ -1,0 +1,25 @@
+/* Minimal enhancements on top of Tailwind for the Ivy-like aesthetic */
+:root {
+  --brand-primary: #111827; /* near black */
+  --brand-secondary: #6b7280; /* gray-500 */
+  --brand-surface: #f9fafb; /* off-white */
+}
+
+html { color-scheme: light; }
+
+/***** Accessibility *****/
+:focus-visible {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+/***** Reduced motion *****/
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

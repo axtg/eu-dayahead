@@ -1,6 +1,7 @@
 // index.js - Main server file
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // Load environment variables
 require('dotenv').config();
@@ -11,7 +12,6 @@ const { loggingMiddleware, logError } = require('./middleware/logging');
 // Import route handlers
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
-const docsRoutes = require('./routes/docs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -27,6 +27,39 @@ app.use(express.json());
 // Add EU-based Better Stack logging middleware
 app.use(loggingMiddleware);
 
+// Serve static frontend (SEO-friendly landing page)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Simple per-IP rate limiter for API routes (X requests/second)
+const RATE_LIMIT_RPS = parseInt(process.env.RATE_LIMIT_RPS || process.env.API_RATE_LIMIT_PER_SEC || '10', 10);
+const __rateBuckets = new Map();
+function rateLimiter(req, res, next) {
+  const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.ip || req.connection?.remoteAddress || 'unknown').toString();
+  const now = Date.now();
+  const windowMs = 1000;
+  let bucket = __rateBuckets.get(ip);
+  if (!bucket || now - bucket.windowStart >= windowMs) {
+    bucket = { count: 0, windowStart: now };
+    __rateBuckets.set(ip, bucket);
+  }
+  bucket.count += 1;
+
+  const remaining = Math.max(RATE_LIMIT_RPS - bucket.count, 0);
+  const resetUnixSeconds = Math.ceil((bucket.windowStart + windowMs) / 1000);
+
+  res.set({
+    'X-RateLimit-Limit': String(RATE_LIMIT_RPS),
+    'X-RateLimit-Remaining': String(remaining),
+    'X-RateLimit-Reset': String(resetUnixSeconds)
+  });
+
+  if (bucket.count > RATE_LIMIT_RPS) {
+    res.set('Retry-After', '1');
+    return res.status(429).json({ status: 'error', message: 'Rate limit exceeded. Try again later.', limitPerSecond: RATE_LIMIT_RPS });
+  }
+  return next();
+}
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   const { COUNTRIES } = require('./config/countries');
@@ -37,16 +70,32 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Mount route handlers - ORDER MATTERS!
-app.use('/docs', docsRoutes);
-app.use('/api', countryRoutes);
-app.use('/api/providers', providerRoutes);
+// Cache health endpoint
+app.get('/health/cache', (req, res) => {
+  const { getCacheStats } = require('./utils/helpers');
+  const stats = getCacheStats();
+  res.json({ status: 'success', cache: stats, timestamp: new Date().toISOString() });
+});
 
-// 404 handler
+// Serve OpenAPI spec at root (keep spec, remove Swagger UI)
+app.get('/openapi.yaml', (req, res) => {
+  res.sendFile(path.join(__dirname, 'docs', 'openapi.yaml'));
+});
+
+// Mount API route handlers - ORDER MATTERS!
+app.use('/api', rateLimiter, countryRoutes);
+app.use('/api/providers', rateLimiter, providerRoutes);
+
+// Fallback to index.html for root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 404 handler for unknown routes (excluding static files already handled)
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
-    message: 'Endpoint not found. Visit /docs for documentation.'
+    message: 'Endpoint not found. Use /api/countries to see available endpoints.'
   });
 });
 
@@ -94,16 +143,8 @@ if (require.main === module) {
     console.log("  autoVat - Use country's default VAT rate (true/false)");
     console.log('  roundTo - Decimal places to round to (default: 5)');
 
-    console.log('\n✨ EXAMPLES:');
-    console.log('  /api/nl/today?markup=0.024&vat=0.21');
-    console.log('  /api/de/tomorrow?autoVat=true');
-    console.log('  /api/fr/next24h?fixedMarkup=0.030&variableMarkup=5');
-    console.log('  /api/be/today?markup=0.025&vat=0.21');
-    console.log('  /api/ch/tomorrow?markup=0.035&vat=0.077');
-
     console.log('\n📚 DOCUMENTATION:');
-    console.log('  Interactive API Docs: http://localhost:3000/docs');
-    console.log('  OpenAPI Spec: http://localhost:3000/docs/openapi.yaml');
+    console.log('  OpenAPI Spec: http://localhost:3000/openapi.yaml');
 
     console.log('\n🔗 Quick test: http://localhost:3000/api/countries');
   });
