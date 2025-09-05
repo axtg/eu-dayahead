@@ -4,17 +4,21 @@
 
 # 🌍 European energy prices API
 
-A comprehensive REST API for fetching real-time electricity prices across 9 EU countries, with support for energy provider markups, VAT calculations, and flexible time periods.
+A comprehensive REST API for fetching real-time electricity prices across 9 European countries, with support for energy provider markups, VAT calculations, and flexible time periods.
+
+**🚀 [Try the hosted version at dap.xadi.eu](https://dap.xadi.eu)**
 
 ## 🚀 Features
 
 - **9 European countries** - Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, Sweden
+- **Interactive web interface** - Visual charts with country selection, VAT auto-population, and provider markup support
 - **Multiple time periods** - Today, next 24 hours, custom date ranges
 - **Provider markups** - Built-in support for energy provider pricing (Next Energy, Vattenfall, Eneco)
-- **Flexible VAT** - Country-specific VAT rates or custom percentages
+- **Flexible VAT** - Country-specific VAT rates automatically applied or custom percentages
 - **Multi-currency** - EUR, CHF, DKK, NOK, SEK support
 - **Timezone aware** - Proper timezone handling for each country
 - **Clean REST API** - Intuitive `/api/{country}/{timeframe}` structure
+- **OpenAPI documentation** - Full API specification with interactive docs
 
 ## 📦 Installation
 

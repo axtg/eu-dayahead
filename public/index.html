@@ -72,78 +72,114 @@
     </noscript>
 
     <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-screen flex flex-col overflow-hidden">
-      <section class="pt-4 pb-4">
+      <!-- Header -->
+      <section class="pt-4 pb-6">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-4 min-w-0">
-            <div class="h-9 w-36 rounded-md bg-gray-100 grid place-items-center text-xs text-gray-500 shrink-0">
-              Logo placeholder
+            <div class="flex items-center gap-2">
+              <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">⚡</div>
+              <h1 class="text-xl sm:text-2xl font-semibold tracking-tight truncate">
+                European power prices
+              </h1>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight truncate">
-              European power prices (day-ahead)
-            </h1>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="aboutBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="About this project">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+              </svg>
+              <span class="hidden sm:inline">About</span>
+            </button>
+            <a href="https://www.buymeacoffee.com/xander.groesbeek" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="Buy me a coffee">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.216 6.415l-.132-.666c-.119-.598-.388-1.163-.766-1.658A4.909 4.909 0 0 0 15.5 2.5h-7c-1.378 0-2.653.56-3.576 1.591A4.909 4.909 0 0 0 4.158 6.75l-.132.665A2.25 2.25 0 0 0 6.25 9.5h.5v7.75A2.25 2.25 0 0 0 9 19.5h6a2.25 2.25 0 0 0 2.25-2.25V9.5h.5a2.25 2.25 0 0 0 2.216-2.585zM9.75 17.25v-6h4.5v6h-4.5z"/>
+              </svg>
+              <span class="hidden sm:inline">Donate</span>
+            </a>
+            <a href="https://github.com/axtg/eu-dayahead" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="View on GitHub">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.374 0 0 5.373 0 12 0 17.302 3.438 21.8 8.207 23.387c.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+              </svg>
+              <span class="hidden sm:inline">GitHub</span>
+            </a>
           </div>
         </div>
       </section>
 
       <!-- Controls -->
-      <section aria-label="Chart controls" class="mb-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-2">
+      <section aria-label="Chart controls" class="mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-3">
           <label class="block">
-            <span class="block text-xs text-secondary mb-1">Country</span>
-            <select id="country" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black">
+            <span class="block text-xs text-secondary mb-1.5">Country</span>
+            <select id="country" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black">
               <!-- populated by JS -->
             </select>
           </label>
 
           <label class="block">
-            <span class="block text-xs text-secondary mb-1">Markup (euro cents/kWh)</span>
-            <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+            <span class="block text-xs text-secondary mb-1.5">Tax (VAT %)</span>
+            <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
           </label>
 
           <label class="block">
-            <span class="block text-xs text-secondary mb-1">Tax (VAT %)</span>
-            <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+            <span class="block text-xs text-secondary mb-1.5">Markup (euro cents/kWh)</span>
+            <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
           </label>
 
           <div class="block min-w-0 md:col-span-2 lg:col-span-2">
-            <span class="block text-xs text-secondary mb-1">Timeframe</span>
+            <span class="block text-xs text-secondary mb-1.5">Timeframe</span>
             <div class="flex w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm" role="group" aria-label="Timeframe switch">
+              <button id="tfNext24h" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white hover:bg-gray-800 focus:ring-2 focus:ring-black" aria-pressed="true">Next 24 hours</button>
               <button id="tfToday" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
-              <button id="tfNext24h" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white focus:ring-2 focus:ring-black" aria-pressed="true">Next 24 hours</button>
             </div>
             <input type="hidden" id="timeframe" value="next24h" />
           </div>
 
-          <!-- API URL action as 5th control -->
           <div class="block min-w-0">
-            <span class="block text-xs text-secondary mb-1">Copy</span>
-            <button id="copyBtn" type="button" class="w-full inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-900 hover:bg-gray-50 focus:ring-2 focus:ring-black">Copy</button>
+            <span class="block text-xs text-secondary mb-1.5">API URL</span>
+            <button id="copyBtn" type="button" class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 focus:ring-2 focus:ring-black transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Copy URL
+            </button>
           </div>
         </div>
       </section>
 
       <!-- Chart Card -->
-      <section class="rounded-2xl bg-white shadow-soft ring-1 ring-black/5 h-[67vh] shrink-0">
-        <div class="p-4 sm:p-5 h-full flex flex-col">
-          <div class="flex items-baseline justify-between shrink-0">
+      <section class="rounded-2xl bg-white shadow-soft ring-1 ring-black/5 flex-1 min-h-0">
+        <div class="p-4 sm:p-6 h-full flex flex-col">
+          <div class="flex items-baseline justify-between shrink-0 mb-4">
             <div>
               <h2 class="text-lg font-medium">Price graph</h2>
               <p id="unitLabel" class="mt-1 text-sm text-secondary">EUR/kWh</p>
             </div>
             <div id="legend" class="text-xs text-secondary hidden sm:block">
-              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#065f46"></span> Cheapest</span>
-              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#10b981"></span> 2nd Cheapest</span>
-              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#eab308"></span> Mid</span>
-              <span class="inline-flex items-center gap-1 mr-4"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#f59e0b"></span> 2nd Most Expensive</span>
-              <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full" style="background-color:#7f1d1d"></span> Most Expensive</span>
+              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#065f46"></span> Cheapest</span>
+              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#10b981"></span> 2nd Cheapest</span>
+              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#eab308"></span> Mid</span>
+              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#f59e0b"></span> 2nd Most Expensive</span>
+              <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#7f1d1d"></span> Most Expensive</span>
             </div>
           </div>
-          <div class="mt-4 flex-1 min-h-0">
+          <div class="flex-1 min-h-0">
             <canvas id="priceChart" class="h-full w-full" aria-label="Day-ahead price chart" role="img"></canvas>
           </div>
         </div>
       </section>
 
+      <!-- Footer -->
+      <footer class="pt-4 pb-4">
+        <div class="flex items-center justify-between text-xs text-secondary">
+          <div>
+            <p>&copy; 2025 <a href="https://xadi.eu" target="_blank" rel="noopener" class="hover:text-primary transition-colors">XADI</a></p>
+          </div>
+          <div class="hidden sm:block">
+            <p>Real-time European electricity prices • 9 countries supported</p>
+          </div>
+        </div>
+      </footer>
 
       <!-- Live region for errors -->
       <section aria-live="polite" aria-atomic="true" class="sr-only">
@@ -151,6 +187,59 @@
       </section>
     </main>
 
+    <!-- About Modal -->
+    <div id="aboutModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold text-primary">About European Power Prices</h2>
+            <button id="closeModal" type="button" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
+            <p>This tool provides real-time European electricity day-ahead prices across 9 EU countries, helping consumers and businesses understand energy costs and optimize their usage.</p>
+            
+            <h3 class="text-lg font-medium text-primary mt-6 mb-3">Supported Countries</h3>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div>🇳🇱 Netherlands (21% VAT)</div>
+              <div>🇩🇪 Germany (19% VAT)</div>
+              <div>🇧🇪 Belgium (21% VAT)</div>
+              <div>🇫🇷 France (20% VAT)</div>
+              <div>🇦🇹 Austria (20% VAT)</div>
+              <div>🇨🇭 Switzerland (7.7% VAT)</div>
+              <div>🇩🇰 Denmark (25% VAT)</div>
+              <div>🇳🇴 Norway (25% VAT)</div>
+              <div>🇸🇪 Sweden (25% VAT)</div>
+            </div>
+            
+            <h3 class="text-lg font-medium text-primary mt-6 mb-3">How to Use</h3>
+            <ul class="list-disc list-inside space-y-1 text-sm">
+              <li><strong>Country:</strong> Select your country to see local prices</li>
+              <li><strong>Markup:</strong> Add your energy provider's markup (in euro cents per kWh)</li>
+              <li><strong>Tax:</strong> VAT percentage - defaults to your country's standard rate</li>
+              <li><strong>Timeframe:</strong> Choose between next 24 hours or today's prices</li>
+              <li><strong>Copy URL:</strong> Get the API endpoint with your current settings</li>
+            </ul>
+            
+            <h3 class="text-lg font-medium text-primary mt-6 mb-3">Data Sources</h3>
+            <p class="text-sm">Prices are sourced from official European energy markets via the ENTSOE Transparency Platform and Stekker.app, updated hourly.</p>
+            
+            <h3 class="text-lg font-medium text-primary mt-6 mb-3">API Access</h3>
+            <p class="text-sm">This tool is powered by a free REST API. Use the "Copy URL" button to get the endpoint for your current settings, or visit our <a href="https://github.com/axtg/eu-dayahead" class="text-blue-600 hover:text-blue-800">GitHub repository</a> for full documentation.</p>
+          </div>
+          
+          <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+            <p class="text-sm text-gray-500">
+              Built with ❤️ by <a href="https://xadi.eu" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">XADI</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script src="/app.js" defer></script>
   </body>

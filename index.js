@@ -124,7 +124,6 @@ if (require.main === module) {
 
     console.log('\n🇳🇱 NL SHORTCUTS:');
     console.log('  GET /api/today - Netherlands today (alias for /api/nl/today)');
-    console.log('  GET /api/tomorrow - Netherlands tomorrow');
     console.log('  GET /api/next/24 - Netherlands next 24 hours');
     console.log('  GET /api/providers/next-energy - Next Energy preset');
     console.log('  GET /health - Health check');

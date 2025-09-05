@@ -141,8 +141,17 @@
     els.country.innerHTML = countriesCache
       .map(c => `<option value="${c.code.toLowerCase()}">${c.name}</option>`)
       .join('');
-    // Default Netherlands
+    // Default Netherlands and set its VAT
     els.country.value = 'nl';
+    updateVatForCountry('nl');
+  }
+
+  function updateVatForCountry(countryCode) {
+    const country = countriesCache.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
+    if (country && country.defaultVat) {
+      const vatPercent = Math.round(country.defaultVat * 100);
+      els.vatPercent.value = vatPercent.toString();
+    }
   }
 
   function debounce(fn, delay = 250) {
@@ -182,25 +191,55 @@
     const btnToday = document.getElementById('tfToday');
     const btnNext = document.getElementById('tfNext24h');
     if (!btnToday || !btnNext) return;
+    
     if (which === 'today') {
-      btnToday.classList.add('bg-black','text-white');
+      btnToday.classList.add('bg-black','text-white','hover:bg-gray-800');
+      btnToday.classList.remove('text-gray-700','hover:bg-gray-50');
       btnToday.setAttribute('aria-pressed','true');
-      btnNext.classList.remove('bg-black','text-white');
+      btnNext.classList.remove('bg-black','text-white','hover:bg-gray-800');
+      btnNext.classList.add('text-gray-700','hover:bg-gray-50');
       btnNext.setAttribute('aria-pressed','false');
     } else {
-      btnNext.classList.add('bg-black','text-white');
+      btnNext.classList.add('bg-black','text-white','hover:bg-gray-800');
+      btnNext.classList.remove('text-gray-700','hover:bg-gray-50');
       btnNext.setAttribute('aria-pressed','true');
-      btnToday.classList.remove('bg-black','text-white');
+      btnToday.classList.remove('bg-black','text-white','hover:bg-gray-800');
+      btnToday.classList.add('text-gray-700','hover:bg-gray-50');
       btnToday.setAttribute('aria-pressed','false');
     }
   }
 
   function bindEvents() {
     // Country and inputs
-    els.country.addEventListener('change', () => { saveState(); refresh(); });
+    els.country.addEventListener('change', () => { 
+      updateVatForCountry(els.country.value);
+      saveState(); 
+      refresh(); 
+    });
     els.markupCents.addEventListener('input', () => { saveState(); refresh(); });
     els.vatPercent.addEventListener('input', () => { saveState(); refresh(); });
 
+    // About modal
+    const aboutBtn = document.getElementById('aboutBtn');
+    const aboutModal = document.getElementById('aboutModal');
+    const closeModal = document.getElementById('closeModal');
+    
+    aboutBtn?.addEventListener('click', () => {
+      aboutModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+    
+    closeModal?.addEventListener('click', () => {
+      aboutModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    });
+    
+    aboutModal?.addEventListener('click', (e) => {
+      if (e.target === aboutModal) {
+        aboutModal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    });
 
     // Timeframe switch
     const btnToday = document.getElementById('tfToday');
@@ -224,7 +263,7 @@
       try {
         await navigator.clipboard.writeText(currentFullUrl || '');
         const original = copyBtn.textContent;
-        copyBtn.textContent = 'Copied';
+        copyBtn.textContent = 'Copied!';
         setTimeout(() => (copyBtn.textContent = original), 1000);
       } catch (e) {
         console.error('Copy failed', e);
@@ -259,15 +298,19 @@
     await loadCountries();
     const saved = loadState();
     if (saved) {
-      if (saved.country) els.country.value = saved.country;
+      if (saved.country) {
+        els.country.value = saved.country;
+        updateVatForCountry(saved.country);
+      }
       if (saved.markupCents) els.markupCents.value = saved.markupCents;
       if (saved.vatPercent) els.vatPercent.value = saved.vatPercent;
       els.timeframe.value = saved.timeframe || 'next24h';
       setSwitchActive(els.timeframe.value);
     } else {
-      // Default to next24h
+      // Default to next24h and Netherlands VAT
       els.timeframe.value = 'next24h';
       setSwitchActive('next24h');
+      updateVatForCountry('nl');
     }
     bindEvents();
     await refresh();
