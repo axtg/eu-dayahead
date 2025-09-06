@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EU Day-Ahead Power Prices — Netherlands default</title>
-    <meta name="description" content="Interactive EU day-ahead power prices for the next 24 hours and today. Compare countries, add markup and VAT. Netherlands by default.">
+    <title>European Electricity Prices Live | Day-Ahead Energy Market Tracker | 9 EU Countries</title>
+    <meta name="description" content="Real-time European electricity day-ahead prices across 9 EU countries. Track hourly energy costs, compare markets, calculate VAT & markup. Free API for Netherlands, Germany, France, Belgium & more.">
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#ffffff" />
     <link rel="canonical" href="/" />
@@ -64,7 +64,7 @@
     <link rel="preload" href="/styles.css" as="style" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body class="bg-surface text-primary antialiased">
+  <body class="bg-gray-50 text-gray-900 antialiased">
     <noscript>
       <div class="bg-yellow-50 text-yellow-800 p-4 text-center">
         This page requires JavaScript to load the interactive chart.
@@ -78,12 +78,19 @@
           <div class="flex items-center gap-4 min-w-0">
             <div class="flex items-center gap-2">
               <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">⚡</div>
-              <h1 class="text-xl sm:text-2xl font-semibold tracking-tight truncate">
-                European power prices
+              <h1 class="text-xl sm:text-2xl font-semibold tracking-tight truncate text-gray-900">
+                EU day-ahead electricity prices
               </h1>
             </div>
           </div>
           <div class="flex items-center gap-3">
+
+            <button id="apiBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="API documentation">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.5 6l-3.5 6 3.5 6h2l-3.5-6 3.5-6h-2zm7 0l3.5 6-3.5 6h-2l3.5-6-3.5-6h2z"/>
+              </svg>
+              <span class="hidden sm:inline">API</span>
+            </button>
             <button id="aboutBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="About this project">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
@@ -92,7 +99,7 @@
             </button>
             <a href="https://www.buymeacoffee.com/xander.groesbeek" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="Buy me a coffee">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.216 6.415l-.132-.666c-.119-.598-.388-1.163-.766-1.658A4.909 4.909 0 0 0 15.5 2.5h-7c-1.378 0-2.653.56-3.576 1.591A4.909 4.909 0 0 0 4.158 6.75l-.132.665A2.25 2.25 0 0 0 6.25 9.5h.5v7.75A2.25 2.25 0 0 0 9 19.5h6a2.25 2.25 0 0 0 2.25-2.25V9.5h.5a2.25 2.25 0 0 0 2.216-2.585zM9.75 17.25v-6h4.5v6h-4.5z"/>
+                <path d="M18.5 3H6c-1.1 0-2 .9-2 2v5.71c0 3.83 2.95 7.18 6.78 7.29 3.96.12 7.22-3.06 7.22-7v-1h.5c1.93 0 3.5-1.57 3.5-3.5S20.43 3 18.5 3zM16 5v3.5c0 2.76-2.24 5-5 5s-5-2.24-5-5V5h10zM18.5 9H18V5h.5c.83 0 1.5.67 1.5 1.5S19.33 9 18.5 9z"/>
               </svg>
               <span class="hidden sm:inline">Donate</span>
             </a>
@@ -110,24 +117,26 @@
       <section aria-label="Chart controls" class="mb-8">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-3">
           <label class="block">
-            <span class="block text-xs text-secondary mb-1.5">Country</span>
+            <span class="block text-xs text-gray-600 mb-1.5">Country</span>
             <select id="country" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black">
               <!-- populated by JS -->
             </select>
           </label>
 
-          <label class="block">
-            <span class="block text-xs text-secondary mb-1.5">Tax (VAT %)</span>
-            <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
-          </label>
+          <div class="flex gap-3 sm:contents">
+            <label class="block flex-1 sm:flex-none">
+              <span class="block text-xs text-gray-600 mb-1.5">Tax (VAT %)</span>
+              <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+            </label>
 
-          <label class="block">
-            <span class="block text-xs text-secondary mb-1.5">Markup (euro cents/kWh)</span>
-            <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
-          </label>
+            <label class="block flex-1 sm:flex-none">
+              <span class="block text-xs text-gray-600 mb-1.5">Markup (euro cents/kWh)</span>
+              <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+            </label>
+          </div>
 
           <div class="block min-w-0 md:col-span-2 lg:col-span-2">
-            <span class="block text-xs text-secondary mb-1.5">Timeframe</span>
+            <span class="block text-xs text-gray-600 mb-1.5">Timeframe</span>
             <div class="flex w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm" role="group" aria-label="Timeframe switch">
               <button id="tfNext24h" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white hover:bg-gray-800 focus:ring-2 focus:ring-black" aria-pressed="true">Next 24 hours</button>
               <button id="tfToday" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
@@ -136,7 +145,7 @@
           </div>
 
           <div class="block min-w-0">
-            <span class="block text-xs text-secondary mb-1.5">API URL</span>
+            <span class="block text-xs text-gray-600 mb-1.5">API URL</span>
             <button id="copyBtn" type="button" class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 focus:ring-2 focus:ring-black transition-colors">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -152,15 +161,31 @@
         <div class="p-4 sm:p-6 h-full flex flex-col">
           <div class="flex items-baseline justify-between shrink-0 mb-4">
             <div>
-              <h2 class="text-lg font-medium">Price graph</h2>
-              <p id="unitLabel" class="mt-1 text-sm text-secondary">EUR/kWh</p>
+              <h2 class="text-lg font-medium text-gray-900">Price graph</h2>
             </div>
-            <div id="legend" class="text-xs text-secondary hidden sm:block">
-              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#065f46"></span> Cheapest</span>
-              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#10b981"></span> 2nd Cheapest</span>
-              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#eab308"></span> Mid</span>
-              <span class="inline-flex items-center gap-1.5 mr-4"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#f59e0b"></span> 2nd Most Expensive</span>
-              <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color:#7f1d1d"></span> Most Expensive</span>
+          </div>
+
+          <!-- Price Statistics Cards -->
+          <div id="priceStats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 hidden">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-2 h-2 bg-green-600 rounded-full"></div>
+                <div class="text-sm font-semibold text-green-900" id="lowestPriceLabel">Lowest price</div>
+              </div>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-2 h-2 bg-red-600 rounded-full"></div>
+                <div class="text-sm font-semibold text-red-900" id="highestPriceLabel">Highest price</div>
+              </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <div class="text-sm font-semibold text-blue-900" id="averagePriceLabel">Average price</div>
+              </div>
             </div>
           </div>
           <div class="flex-1 min-h-0">
@@ -171,9 +196,9 @@
 
       <!-- Footer -->
       <footer class="pt-4 pb-4">
-        <div class="flex items-center justify-between text-xs text-secondary">
+        <div class="flex items-center justify-between text-xs text-gray-600">
           <div>
-            <p>&copy; 2025 <a href="https://xadi.eu" target="_blank" rel="noopener" class="hover:text-primary transition-colors">XADI</a></p>
+            <p>&copy; 2025 <a href="https://xadi.eu" target="_blank" rel="noopener" class="hover:text-gray-900 transition-colors">XADI</a></p>
           </div>
           <div class="hidden sm:block">
             <p>Real-time European electricity prices • 9 countries supported</p>
@@ -192,7 +217,7 @@
       <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-semibold text-primary">About European Power Prices</h2>
+            <h2 class="text-2xl font-semibold text-gray-900">About EU day-ahead prices</h2>
             <button id="closeModal" type="button" class="text-gray-400 hover:text-gray-600 transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -201,40 +226,171 @@
           </div>
           
           <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
-            <p>This tool provides real-time European electricity day-ahead prices across 9 EU countries, helping consumers and businesses understand energy costs and optimize their usage.</p>
-            
-            <h3 class="text-lg font-medium text-primary mt-6 mb-3">Supported Countries</h3>
+            <p>This comprehensive tool provides real-time European electricity day-ahead prices across 9 EU countries, helping consumers, businesses, and energy traders understand electricity costs and optimize their energy usage. Track hourly electricity prices, compare energy costs across European markets, and calculate total costs including VAT and energy provider markups.</p>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Supported European Energy Markets</h3>
             <div class="grid grid-cols-2 gap-2 text-sm">
-              <div>🇳🇱 Netherlands (21% VAT)</div>
-              <div>🇩🇪 Germany (19% VAT)</div>
-              <div>🇧🇪 Belgium (21% VAT)</div>
-              <div>🇫🇷 France (20% VAT)</div>
-              <div>🇦🇹 Austria (20% VAT)</div>
-              <div>🇨🇭 Switzerland (7.7% VAT)</div>
-              <div>🇩🇰 Denmark (25% VAT)</div>
-              <div>🇳🇴 Norway (25% VAT)</div>
-              <div>🇸🇪 Sweden (25% VAT)</div>
+              <div>🇳🇱 Netherlands - Dutch electricity market (21% VAT)</div>
+              <div>🇩🇪 Germany - German power exchange (19% VAT)</div>
+              <div>🇧🇪 Belgium - Belgian electricity prices (21% VAT)</div>
+              <div>🇫🇷 France - French energy market (20% VAT)</div>
+              <div>🇦🇹 Austria - Austrian power prices (20% VAT)</div>
+              <div>🇨🇭 Switzerland - Swiss electricity market (7.7% VAT)</div>
+              <div>🇩🇰 Denmark - Danish energy exchange (25% VAT)</div>
+              <div>🇳🇴 Norway - Norwegian power market (25% VAT)</div>
+              <div>🇸🇪 Sweden - Swedish electricity prices (25% VAT)</div>
             </div>
-            
-            <h3 class="text-lg font-medium text-primary mt-6 mb-3">How to Use</h3>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">How to Use the Energy Price Calculator</h3>
             <ul class="list-disc list-inside space-y-1 text-sm">
-              <li><strong>Country:</strong> Select your country to see local prices</li>
-              <li><strong>Markup:</strong> Add your energy provider's markup (in euro cents per kWh)</li>
-              <li><strong>Tax:</strong> VAT percentage - defaults to your country's standard rate</li>
-              <li><strong>Timeframe:</strong> Choose between next 24 hours or today's prices</li>
-              <li><strong>Copy URL:</strong> Get the API endpoint with your current settings</li>
+              <li><strong>Country Selection:</strong> Choose your European country to view local electricity prices and market data</li>
+              <li><strong>Energy Provider Markup:</strong> Add your electricity supplier's markup cost (in euro cents per kWh) for accurate total pricing</li>
+              <li><strong>VAT Tax Calculation:</strong> VAT percentage automatically defaults to your country's standard energy tax rate</li>
+              <li><strong>Time Period:</strong> Compare prices for next 24 hours or view today's complete hourly electricity rates</li>
+              <li><strong>API Integration:</strong> Copy the REST API endpoint URL for integration into your energy management systems</li>
             </ul>
-            
-            <h3 class="text-lg font-medium text-primary mt-6 mb-3">Data Sources</h3>
-            <p class="text-sm">Prices are sourced from official European energy markets via the ENTSOE Transparency Platform and Stekker.app, updated hourly.</p>
-            
-            <h3 class="text-lg font-medium text-primary mt-6 mb-3">API Access</h3>
-            <p class="text-sm">This tool is powered by a free REST API. Use the "Copy URL" button to get the endpoint for your current settings, or visit our <a href="https://github.com/axtg/eu-dayahead" class="text-blue-600 hover:text-blue-800">GitHub repository</a> for full documentation.</p>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Official Energy Market Data Sources</h3>
+            <p class="text-sm">All electricity prices are sourced from official European energy market data via the ENTSOE Transparency Platform (European Network of Transmission System Operators) and Stekker.app energy market API. Price data is updated hourly to ensure accuracy for energy trading, cost optimization, and consumption planning.</p>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Free Energy Price API Access</h3>
+            <p class="text-sm">This European electricity price tracker is powered by a comprehensive REST API service. Access real-time energy market data programmatically for energy management applications, smart home systems, and business energy optimization. Use the "API" button for complete documentation, rate limits, and integration examples. Visit our <a href="https://github.com/axtg/eu-dayahead" class="text-blue-600 hover:text-blue-800">open-source GitHub repository</a> for technical documentation and community contributions.</p>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Energy Cost Optimization Benefits</h3>
+            <ul class="list-disc list-inside space-y-1 text-sm">
+              <li><strong>Smart Energy Usage:</strong> Schedule high-consumption activities during low-price hours to reduce electricity bills</li>
+              <li><strong>Business Energy Management:</strong> Optimize industrial processes and operations based on real-time electricity pricing</li>
+              <li><strong>Renewable Energy Trading:</strong> Compare market prices across European energy exchanges for solar and wind power trading</li>
+              <li><strong>Energy Provider Comparison:</strong> Calculate and compare total costs including different supplier markups and fees</li>
+            </ul>
           </div>
           
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <p class="text-sm text-gray-500">
               Built with ❤️ by <a href="https://xadi.eu" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">XADI</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Modal -->
+    <div id="apiModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900">API Documentation</h2>
+            <button id="closeApiModal" type="button" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="prose prose-sm max-w-none text-gray-700 space-y-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-blue-900 mt-0 mb-2">Current API Endpoint</h3>
+              <div class="bg-white border border-blue-300 rounded p-3 font-mono text-sm break-all text-gray-900" id="currentApiEndpoint">
+                Loading...
+              </div>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Base Endpoints</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div class="bg-gray-50 rounded-lg p-3">
+                <div class="font-mono text-blue-600 mb-1">GET /api/{country}/today</div>
+                <div class="text-gray-600">Today's 24-hour prices</div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3">
+                <div class="font-mono text-blue-600 mb-1">GET /api/{country}/next24h</div>
+                <div class="text-gray-600">Next 24 hours from now</div>
+              </div>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Query Parameters</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-medium text-gray-900">Parameter</th>
+                    <th class="px-3 py-2 text-left font-medium text-gray-900">Type</th>
+                    <th class="px-3 py-2 text-left font-medium text-gray-900">Description</th>
+                    <th class="px-3 py-2 text-left font-medium text-gray-900">Example</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-blue-600">markup</td>
+                    <td class="px-3 py-2">decimal</td>
+                    <td class="px-3 py-2">Fixed markup in EUR/kWh</td>
+                    <td class="px-3 py-2 font-mono">0.024</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-blue-600">vat</td>
+                    <td class="px-3 py-2">decimal</td>
+                    <td class="px-3 py-2">VAT as decimal (0.21 = 21%)</td>
+                    <td class="px-3 py-2 font-mono">0.21</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-blue-600">autoVat</td>
+                    <td class="px-3 py-2">boolean</td>
+                    <td class="px-3 py-2">Use country's default VAT</td>
+                    <td class="px-3 py-2 font-mono">true</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-blue-600">roundTo</td>
+                    <td class="px-3 py-2">integer</td>
+                    <td class="px-3 py-2">Decimal places (default: 5)</td>
+                    <td class="px-3 py-2 font-mono">3</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Rate Limiting</h3>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li><strong>Rate limit:</strong> 100 requests per minute per IP</li>
+                <li><strong>Burst limit:</strong> 10 requests per second</li>
+                <li><strong>Data updates:</strong> Hourly from official sources</li>
+                <li><strong>Cache:</strong> Responses cached for 5 minutes</li>
+              </ul>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Usage Terms</h3>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div class="space-y-3 text-sm">
+                <div>
+                  <h4 class="font-medium text-green-900 mb-1">✅ Fair Use - Non-Commercial</h4>
+                  <p class="text-green-800">Free for personal projects, research, education, and non-commercial applications. Please respect rate limits and cache responses when possible.</p>
+                </div>
+                <div>
+                  <h4 class="font-medium text-green-900 mb-1">💼 Commercial Use</h4>
+                  <p class="text-green-800">For commercial applications, high-volume usage, or custom integrations, please contact us at <a href="mailto:sales@xadi.nl" class="text-green-600 hover:text-green-800 underline">sales@xadi.nl</a> for licensing options.</p>
+                </div>
+                <div>
+                  <h4 class="font-medium text-green-900 mb-1">📊 Data Attribution</h4>
+                  <p class="text-green-800">Data sourced from ENTSOE Transparency Platform and Stekker.app. Please include attribution when redistributing data.</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Example Requests</h3>
+            <div class="space-y-3">
+              <div class="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                <div class="text-green-400 mb-1"># Get today's Dutch prices with Next Energy markup</div>
+                <div>curl "https://dap.xadi.eu/api/nl/today?markup=0.024&vat=0.21"</div>
+              </div>
+              <div class="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                <div class="text-green-400 mb-1"># Get German prices with auto VAT</div>
+                <div>curl "https://dap.xadi.eu/api/de/next24h?autoVat=true"</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+            <p class="text-sm text-gray-500">
+              Need help? Check our <a href="https://github.com/axtg/eu-dayahead" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">GitHub repository</a> or contact <a href="mailto:sales@xadi.nl" class="text-blue-600 hover:text-blue-800">sales@xadi.nl</a>
             </p>
           </div>
         </div>

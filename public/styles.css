@@ -5,7 +5,14 @@
   --brand-surface: #f9fafb; /* off-white */
 }
 
+:root.dark {
+  --brand-primary: #f9fafb; /* light text */
+  --brand-secondary: #9ca3af; /* gray-400 */
+  --brand-surface: #111827; /* dark background */
+}
+
 html { color-scheme: light; }
+html.dark { color-scheme: dark; }
 
 /***** Accessibility *****/
 :focus-visible {
@@ -22,4 +29,9 @@ html { color-scheme: light; }
     scroll-behavior: auto !important;
   }
 }
+
+/***** Custom utility classes *****/
+.bg-surface { background-color: var(--brand-surface); }
+.text-primary { color: var(--brand-primary); }
+.text-secondary { color: var(--brand-secondary); }
 

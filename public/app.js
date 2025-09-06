@@ -5,9 +5,10 @@
     markupCents: document.getElementById('markupCents'),
     vatPercent: document.getElementById('vatPercent'),
     timeframe: document.getElementById('timeframe'),
-    unitLabel: document.getElementById('unitLabel'),
     status: document.getElementById('statusMessage')
   };
+
+
 
   let chart;
   let countriesCache = [];
@@ -53,6 +54,39 @@
     const max1 = sorted[sorted.length - 1]?.i ?? -1;
     const max2 = sorted[sorted.length - 2]?.i ?? -1;
     return { min1, min2, max1, max2 };
+  }
+
+  function updatePriceStats(labels, series, unit) {
+    const priceStatsEl = document.getElementById('priceStats');
+
+    if (!series || series.length === 0) {
+      priceStatsEl.classList.add('hidden');
+      return;
+    }
+
+    // Calculate statistics
+    const minPrice = Math.min(...series);
+    const maxPrice = Math.max(...series);
+    const avgPrice = series.reduce((sum, price) => sum + price, 0) / series.length;
+
+    const minIndex = series.indexOf(minPrice);
+    const maxIndex = series.indexOf(maxPrice);
+
+    // Update the cards with 'price at time' format
+    const lowestTime = labels[minIndex] || '--';
+    const highestTime = labels[maxIndex] || '--';
+
+    document.getElementById('lowestPriceLabel').textContent =
+      `Lowest price at ${lowestTime}: ${minPrice.toFixed(5)} ${unit}`;
+
+    document.getElementById('highestPriceLabel').textContent =
+      `Highest price at ${highestTime}: ${maxPrice.toFixed(5)} ${unit}`;
+
+    document.getElementById('averagePriceLabel').textContent =
+      `Average price: ${avgPrice.toFixed(5)} ${unit}`;
+
+    // Show the stats
+    priceStatsEl.classList.remove('hidden');
   }
 
   function renderChart(labels, series, unit) {
@@ -117,7 +151,7 @@
           x: {
             ticks: {
               maxRotation: 0,
-              callback: (val, idx) => labels[idx]
+              callback: (_, idx) => labels[idx]
             }
           },
           y: {
@@ -175,11 +209,11 @@
 
       const payload = await fetchJSON(endpoint);
       const unit = payload?.info?.priceUnit || 'EUR/kWh';
-      els.unitLabel.textContent = unit;
 
       const labels = (payload?.data || []).map(p => p.hour ?? new Date(p.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       const series = (payload?.data || []).map(p => Number(p.price));
 
+      updatePriceStats(labels, series, unit);
       renderChart(labels, series, unit);
     } catch (err) {
       console.error(err);
@@ -223,21 +257,66 @@
     const aboutBtn = document.getElementById('aboutBtn');
     const aboutModal = document.getElementById('aboutModal');
     const closeModal = document.getElementById('closeModal');
-    
+
     aboutBtn?.addEventListener('click', () => {
       aboutModal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     });
-    
+
     closeModal?.addEventListener('click', () => {
       aboutModal.classList.add('hidden');
       document.body.style.overflow = '';
     });
-    
+
     aboutModal?.addEventListener('click', (e) => {
       if (e.target === aboutModal) {
         aboutModal.classList.add('hidden');
         document.body.style.overflow = '';
+      }
+    });
+
+    // API modal
+    const apiBtn = document.getElementById('apiBtn');
+    const apiModal = document.getElementById('apiModal');
+    const closeApiModal = document.getElementById('closeApiModal');
+    const copyApiUrl = document.getElementById('copyApiUrl');
+
+    apiBtn?.addEventListener('click', () => {
+      // Update the current API endpoint display
+      const currentEndpoint = document.getElementById('currentApiEndpoint');
+      if (currentEndpoint) {
+        currentEndpoint.textContent = currentFullUrl || 'No data loaded yet';
+      }
+      apiModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    closeApiModal?.addEventListener('click', () => {
+      apiModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    });
+
+    apiModal?.addEventListener('click', (e) => {
+      if (e.target === apiModal) {
+        apiModal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    });
+
+    copyApiUrl?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(currentFullUrl);
+        copyApiUrl.textContent = 'Copied!';
+        setTimeout(() => {
+          copyApiUrl.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            Copy URL
+          `;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy URL:', err);
       }
     });
 
