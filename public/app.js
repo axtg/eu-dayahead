@@ -72,18 +72,32 @@
     const minIndex = series.indexOf(minPrice);
     const maxIndex = series.indexOf(maxPrice);
 
-    // Update the cards with 'price at time' format
-    const lowestTime = labels[minIndex] || '--';
-    const highestTime = labels[maxIndex] || '--';
+    // Format times to just show hour (e.g., "14h")
+    const formatTime = (time) => {
+      if (!time || time === '--') return '--';
+      // Extract hour from time like "14:00" -> "14h"
+      const hour = time.split(':')[0];
+      return `${hour}h`;
+    };
 
-    document.getElementById('lowestPriceLabel').textContent =
-      `Lowest price at ${lowestTime}: ${minPrice.toFixed(5)} ${unit}`;
+    const lowestTime = formatTime(labels[minIndex]);
+    const highestTime = formatTime(labels[maxIndex]);
 
-    document.getElementById('highestPriceLabel').textContent =
-      `Highest price at ${highestTime}: ${maxPrice.toFixed(5)} ${unit}`;
+    // Update with compact format: [icon] €0.131 at 14h
+    document.getElementById('lowestPriceLabel').innerHTML =
+      `<svg class="w-3 h-3 inline mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 4.414 6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+      </svg>€${minPrice.toFixed(3)} at ${lowestTime}`;
 
-    document.getElementById('averagePriceLabel').textContent =
-      `Average price: ${avgPrice.toFixed(5)} ${unit}`;
+    document.getElementById('highestPriceLabel').innerHTML =
+      `<svg class="w-3 h-3 inline mr-1 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 15.586l3.293-3.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+      </svg>€${maxPrice.toFixed(3)} at ${highestTime}`;
+
+    document.getElementById('averagePriceLabel').innerHTML =
+      `<svg class="w-3 h-3 inline mr-1 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+      </svg>€${avgPrice.toFixed(3)}`;
 
     // Show the stats
     priceStatsEl.classList.remove('hidden');

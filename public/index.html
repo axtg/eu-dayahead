@@ -166,25 +166,28 @@
           </div>
 
           <!-- Price Statistics Cards -->
-          <div id="priceStats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 hidden">
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div class="flex items-center gap-2 mb-1">
-                <div class="w-2 h-2 bg-green-600 rounded-full"></div>
-                <div class="text-sm font-semibold text-green-900" id="lowestPriceLabel">Lowest price</div>
+          <div id="priceStats" class="grid grid-cols-3 gap-1 mb-3 text-xs hidden">
+            <div class="bg-green-50 border border-green-200 rounded p-1.5 text-center">
+              <div class="text-green-900 font-medium" id="lowestPriceLabel">
+                <svg class="w-3 h-3 inline mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 4.414 6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>--
               </div>
             </div>
 
-            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div class="flex items-center gap-2 mb-1">
-                <div class="w-2 h-2 bg-red-600 rounded-full"></div>
-                <div class="text-sm font-semibold text-red-900" id="highestPriceLabel">Highest price</div>
+            <div class="bg-red-50 border border-red-200 rounded p-1.5 text-center">
+              <div class="text-red-900 font-medium" id="highestPriceLabel">
+                <svg class="w-3 h-3 inline mr-1 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 15.586l3.293-3.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>--
               </div>
             </div>
 
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div class="flex items-center gap-2 mb-1">
-                <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <div class="text-sm font-semibold text-blue-900" id="averagePriceLabel">Average price</div>
+            <div class="bg-blue-50 border border-blue-200 rounded p-1.5 text-center">
+              <div class="text-blue-900 font-medium" id="averagePriceLabel">
+                <svg class="w-3 h-3 inline mr-1 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>--
               </div>
             </div>
           </div>
