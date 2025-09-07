@@ -126,12 +126,26 @@
           <div class="flex gap-3 sm:contents">
             <label class="block flex-1 sm:flex-none">
               <span class="block text-xs text-gray-600 mb-1.5">Tax (VAT %)</span>
-              <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+              <div class="relative">
+                <input id="vatPercent" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 21" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 pr-8 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+                <button id="clearVat" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" title="Clear VAT">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
             </label>
 
             <label class="block flex-1 sm:flex-none">
               <span class="block text-xs text-gray-600 mb-1.5">Markup (euro cents/kWh)</span>
-              <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+              <div class="relative">
+                <input id="markupCents" type="number" inputmode="decimal" step="0.1" min="0" value="0" placeholder="e.g., 2.4" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 pr-8 shadow-sm outline-none focus:ring-2 focus:ring-black" />
+                <button id="clearMarkup" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" title="Clear markup">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
             </label>
           </div>
 
@@ -143,16 +157,6 @@
             </div>
             <input type="hidden" id="timeframe" value="next24h" />
           </div>
-
-          <div class="block min-w-0">
-            <span class="block text-xs text-gray-600 mb-1.5">API URL</span>
-            <button id="copyBtn" type="button" class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 focus:ring-2 focus:ring-black transition-colors">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy URL
-            </button>
-          </div>
         </div>
       </section>
 
@@ -162,6 +166,14 @@
           <div class="flex items-baseline justify-between shrink-0 mb-4">
             <div>
               <h2 class="text-lg font-medium text-gray-900">Price graph</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="copyBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                Copy API URL
+              </button>
             </div>
           </div>
 
@@ -282,7 +294,7 @@
       <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-semibold text-gray-900">API Documentation</h2>
+            <h2 class="text-2xl font-semibold text-gray-900">API documentation</h2>
             <button id="closeApiModal" type="button" class="text-gray-400 hover:text-gray-600 transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
