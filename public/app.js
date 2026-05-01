@@ -5,6 +5,7 @@
     markupCents: document.getElementById('markupCents'),
     vatPercent: document.getElementById('vatPercent'),
     timeframe: document.getElementById('timeframe'),
+    interval: document.getElementById('interval'),
     status: document.getElementById('statusMessage')
   };
 
@@ -23,7 +24,7 @@
     return isFinite(n) ? n / 100 : 0;
   }
 
-  function buildEndpoint({ country, timeframe, markupCents, vatPercent }) {
+  function buildEndpoint({ country, timeframe, markupCents, vatPercent, interval }) {
     const tfPath = timeframe === 'next24h' ? 'next24h' : 'today';
     const base = `/api/${country}/${tfPath}`;
 
@@ -32,6 +33,7 @@
     const vat = percentToDecimal(vatPercent);
     if (markup > 0) params.set('markup', markup.toString());
     if (vat > 0) params.set('vat', vat.toString());
+    if (interval && interval !== '60M') params.set('interval', interval);
 
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
@@ -72,12 +74,11 @@
     const minIndex = series.indexOf(minPrice);
     const maxIndex = series.indexOf(maxPrice);
 
-    // Format times to just show hour (e.g., "14h")
+    // Format hour-aligned values as "14h"; quarter values keep full "HH:MM" so 14:15 ≠ 14:00.
     const formatTime = (time) => {
       if (!time || time === '--') return '--';
-      // Extract hour from time like "14:00" -> "14h"
-      const hour = time.split(':')[0];
-      return `${hour}h`;
+      const [h, m] = time.split(':');
+      return m === '00' ? `${h}h` : `${h}:${m}`;
     };
 
     const lowestTime = formatTime(labels[minIndex]);
@@ -103,7 +104,7 @@
     priceStatsEl.classList.remove('hidden');
   }
 
-  function renderChart(labels, series, unit) {
+  function renderChart(labels, series, unit, resolutionMinutes = 60) {
     const ctx = document.getElementById('priceChart');
 
     if (chart) {
@@ -165,7 +166,13 @@
           x: {
             ticks: {
               maxRotation: 0,
-              callback: (_, idx) => labels[idx]
+              autoSkip: true,
+              callback: (_, idx) => {
+                const lbl = labels[idx];
+                // For 15-min data, only show HH:00 marks to keep the axis readable.
+                if (resolutionMinutes === 15 && lbl && !lbl.endsWith(':00')) return '';
+                return lbl;
+              }
             }
           },
           y: {
@@ -209,44 +216,48 @@
       const timeframe = els.timeframe.value || 'next24h';
       const markupCents = els.markupCents.value || '0';
       const vatPercent = els.vatPercent.value || '0';
+      const interval = els.interval.value || '60M';
 
-      const endpoint = buildEndpoint({ country, timeframe, markupCents, vatPercent });
+      const endpoint = buildEndpoint({ country, timeframe, markupCents, vatPercent, interval });
       setApiUrlDisplay(endpoint);
 
       const payload = await fetchJSON(endpoint);
       const unit = payload?.info?.priceUnit || 'EUR/kWh';
+      const resolutionMinutes = payload?.info?.resolutionMinutes || 60;
 
       const labels = (payload?.data || []).map(p => p.hour ?? new Date(p.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       const series = (payload?.data || []).map(p => Number(p.price));
 
       updatePriceStats(labels, series, unit);
-      renderChart(labels, series, unit);
+      renderChart(labels, series, unit, resolutionMinutes);
     } catch (err) {
       console.error(err);
       els.status.textContent = 'Failed to load data';
     }
   }
 
+  function setPillActive(activeBtn, inactiveBtn) {
+    if (!activeBtn || !inactiveBtn) return;
+    activeBtn.classList.add('bg-black','text-white','hover:bg-gray-800');
+    activeBtn.classList.remove('text-gray-700','hover:bg-gray-50');
+    activeBtn.setAttribute('aria-pressed','true');
+    inactiveBtn.classList.remove('bg-black','text-white','hover:bg-gray-800');
+    inactiveBtn.classList.add('text-gray-700','hover:bg-gray-50');
+    inactiveBtn.setAttribute('aria-pressed','false');
+  }
+
   function setSwitchActive(which) {
     const btnToday = document.getElementById('tfToday');
     const btnNext = document.getElementById('tfNext24h');
-    if (!btnToday || !btnNext) return;
+    if (which === 'today') setPillActive(btnToday, btnNext);
+    else setPillActive(btnNext, btnToday);
+  }
 
-    if (which === 'today') {
-      btnToday.classList.add('bg-black','text-white','hover:bg-gray-800');
-      btnToday.classList.remove('text-gray-700','hover:bg-gray-50');
-      btnToday.setAttribute('aria-pressed','true');
-      btnNext.classList.remove('bg-black','text-white','hover:bg-gray-800');
-      btnNext.classList.add('text-gray-700','hover:bg-gray-50');
-      btnNext.setAttribute('aria-pressed','false');
-    } else {
-      btnNext.classList.add('bg-black','text-white','hover:bg-gray-800');
-      btnNext.classList.remove('text-gray-700','hover:bg-gray-50');
-      btnNext.setAttribute('aria-pressed','true');
-      btnToday.classList.remove('bg-black','text-white','hover:bg-gray-800');
-      btnToday.classList.add('text-gray-700','hover:bg-gray-50');
-      btnToday.setAttribute('aria-pressed','false');
-    }
+  function setIntervalActive(which) {
+    const btnHourly = document.getElementById('intvHourly');
+    const btn15M = document.getElementById('intv15M');
+    if (which === '15M') setPillActive(btn15M, btnHourly);
+    else setPillActive(btnHourly, btn15M);
   }
 
   function bindEvents() {
@@ -342,6 +353,22 @@
       refresh();
     });
 
+    // Interval (resolution) switch
+    const btnHourly = document.getElementById('intvHourly');
+    const btn15M = document.getElementById('intv15M');
+    btnHourly?.addEventListener('click', () => {
+      els.interval.value = '60M';
+      setIntervalActive('60M');
+      saveState();
+      refresh();
+    });
+    btn15M?.addEventListener('click', () => {
+      els.interval.value = '15M';
+      setIntervalActive('15M');
+      saveState();
+      refresh();
+    });
+
     // Copy button
     const copyBtn = document.getElementById('copyBtn');
     copyBtn?.addEventListener('click', async () => {
@@ -364,7 +391,8 @@
         country: els.country.value,
         timeframe: els.timeframe.value,
         markupCents: els.markupCents.value,
-        vatPercent: els.vatPercent.value
+        vatPercent: els.vatPercent.value,
+        interval: els.interval.value
       };
       localStorage.setItem(LS_KEY, JSON.stringify(state));
     } catch {
@@ -393,10 +421,14 @@
       if (saved.vatPercent) els.vatPercent.value = saved.vatPercent;
       els.timeframe.value = saved.timeframe || 'next24h';
       setSwitchActive(els.timeframe.value);
+      els.interval.value = saved.interval || '60M';
+      setIntervalActive(els.interval.value);
     } else {
       // Default to next24h and Netherlands VAT
       els.timeframe.value = 'next24h';
       setSwitchActive('next24h');
+      els.interval.value = '60M';
+      setIntervalActive('60M');
       updateVatForCountry('nl');
     }
     bindEvents();

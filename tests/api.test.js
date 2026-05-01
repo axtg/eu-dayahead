@@ -1,6 +1,11 @@
 const request = require('supertest');
 const app = require('../index');
 
+// Stekker (the public fallback when ENTSOE_API_KEY is unset, e.g. on CI) only
+// serves NL reliably; it rejects DE-LU and a few other zones. Tests that hit
+// non-NL price endpoints need a real ENTSOE key — skip them otherwise.
+const testIfEntsoe = process.env.ENTSOE_API_KEY ? test : test.skip;
+
 describe('European Energy Prices API', () => {
   let app;
 
@@ -160,7 +165,7 @@ describe('European Energy Prices API', () => {
         expect(response.body.info.totalHours).toBe(24);
       }, 15000);
 
-      test('GET /api/de/today should return exactly 24 hours for Germany', async () => {
+      testIfEntsoe('GET /api/de/today should return exactly 24 hours for Germany', async () => {
         const response = await request(app).get('/api/de/today').expect(200);
 
         expect(response.body.data.length).toBe(24);
@@ -233,7 +238,7 @@ describe('European Energy Prices API', () => {
         }
       }, 15000);
 
-      test('Next24h should work correctly across different timezones', async () => {
+      testIfEntsoe('Next24h should work correctly across different timezones', async () => {
         // Test multiple countries with different timezones
         const countries = ['nl', 'de', 'ch']; // Netherlands (CEST), Germany (CEST), Switzerland (CEST)
 
