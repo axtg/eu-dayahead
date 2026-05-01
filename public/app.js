@@ -56,7 +56,7 @@
     return { min1, min2, max1, max2 };
   }
 
-  function updatePriceStats(labels, series, unit) {
+  function updatePriceStats(labels, series, _unit) {
     const priceStatsEl = document.getElementById('priceStats');
 
     if (!series || series.length === 0) {
@@ -202,14 +202,6 @@
     }
   }
 
-  function debounce(fn, delay = 250) {
-    let t;
-    return (...args) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...args), delay);
-    };
-  }
-
   async function refresh() {
     try {
       els.status.textContent = '';
@@ -239,7 +231,7 @@
     const btnToday = document.getElementById('tfToday');
     const btnNext = document.getElementById('tfNext24h');
     if (!btnToday || !btnNext) return;
-    
+
     if (which === 'today') {
       btnToday.classList.add('bg-black','text-white','hover:bg-gray-800');
       btnToday.classList.remove('text-gray-700','hover:bg-gray-50');
@@ -259,10 +251,10 @@
 
   function bindEvents() {
     // Country and inputs
-    els.country.addEventListener('change', () => { 
+    els.country.addEventListener('change', () => {
       updateVatForCountry(els.country.value);
-      saveState(); 
-      refresh(); 
+      saveState();
+      refresh();
     });
     els.markupCents.addEventListener('input', () => { saveState(); refresh(); });
     els.vatPercent.addEventListener('input', () => { saveState(); refresh(); });
@@ -375,7 +367,9 @@
         vatPercent: els.vatPercent.value
       };
       localStorage.setItem(LS_KEY, JSON.stringify(state));
-    } catch {}
+    } catch {
+      /* ignore quota / disabled storage */
+    }
   }
   function loadState() {
     try {
