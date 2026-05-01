@@ -31,6 +31,13 @@ module.exports = {
       rules: {
         'no-unused-expressions': 'off'
       }
+    },
+    {
+      files: ['public/**/*.js'],
+      env: {
+        browser: true,
+        node: false
+      }
     }
   ]
 };

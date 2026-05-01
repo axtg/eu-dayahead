@@ -150,25 +150,3 @@ function textOf(node) {
 }
 
 module.exports = { EntsoeAPI };
-
-if (require.main === module) {
-  require('dotenv').config();
-  const apiKey = process.env.ENTSOE_API_KEY;
-  if (!apiKey) {
-    console.error('Set ENTSOE_API_KEY in .env');
-    process.exit(1);
-  }
-  const e = new EntsoeAPI(apiKey);
-  const start = new Date();
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 2);
-  e.getCountryPrices('nl', start, end)
-    .then(prices => {
-      console.log(`Got ${prices.length} prices, sample:`, prices.slice(0, 3));
-    })
-    .catch(err => {
-      console.error('Error:', err.message);
-      process.exit(1);
-    });
-}

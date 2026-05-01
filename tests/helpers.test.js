@@ -138,8 +138,8 @@ describe('Helper Functions', () => {
 
       expect(result.country).toHaveProperty('code', 'CH');
       expect(result.country).toHaveProperty('name', 'Switzerland');
-      expect(result.country).toHaveProperty('currency', 'CHF');
-      expect(result.info).toHaveProperty('priceUnit', 'CHF/kWh');
+      expect(result.country).toHaveProperty('currency', 'EUR');
+      expect(result.info).toHaveProperty('priceUnit', 'EUR/kWh');
     });
 
     test('should include additional info when provided', () => {

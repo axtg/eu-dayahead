@@ -1,4 +1,8 @@
-// config/countries.js - Country configuration
+// config/countries.js - Country configuration.
+// `currency` is the currency the *price values* are quoted in. Both ENTSOE and Stekker quote
+// every zone in EUR, so all entries are EUR — including CH/DK/NO/SE, where the local economic
+// currency differs (CHF/DKK/NOK/SEK). VAT rates remain country-specific because VAT is applied
+// to the EUR-quoted price.
 const COUNTRIES = {
   nl: {
     name: 'Netherlands',
@@ -49,7 +53,7 @@ const COUNTRIES = {
     name: 'Switzerland',
     biddingZone: '10YCH-SWISSGRIDZ',
     stekkerRegion: 'CH',
-    currency: 'CHF',
+    currency: 'EUR',
     timezone: 'Europe/Zurich',
     defaultVat: 0.077,
     locale: 'de-CH'
@@ -58,7 +62,7 @@ const COUNTRIES = {
     name: 'Denmark',
     biddingZone: '10YDK-1--------W', // West Denmark
     stekkerRegion: 'DK1',
-    currency: 'DKK',
+    currency: 'EUR',
     timezone: 'Europe/Copenhagen',
     defaultVat: 0.25,
     locale: 'da-DK'
@@ -67,7 +71,7 @@ const COUNTRIES = {
     name: 'Norway',
     biddingZone: '10YNO-2--------T', // South-west Norway (most populated)
     stekkerRegion: 'NO2',
-    currency: 'NOK',
+    currency: 'EUR',
     timezone: 'Europe/Oslo',
     defaultVat: 0.25,
     locale: 'nb-NO'
@@ -76,7 +80,7 @@ const COUNTRIES = {
     name: 'Sweden',
     biddingZone: '10Y1001A1001A44P', // SE1 - Lulea (Northern Sweden)
     stekkerRegion: 'SE1',
-    currency: 'SEK',
+    currency: 'EUR',
     timezone: 'Europe/Stockholm',
     defaultVat: 0.25,
     locale: 'sv-SE'

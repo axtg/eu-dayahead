@@ -18,7 +18,7 @@ A comprehensive REST API for fetching real-time electricity prices across 9 Euro
 - **Multiple time periods** - Today, next 24 hours, custom date ranges
 - **Provider markups** - Built-in support for energy provider pricing (Next Energy, Vattenfall, Eneco)
 - **Flexible VAT** - Country-specific VAT rates automatically applied or custom percentages
-- **Multi-currency** - EUR, CHF, DKK, NOK, SEK support
+- **EUR-quoted prices** - All zones return prices in EUR (the currency the underlying market uses), including Switzerland and the Nordic countries
 - **Timezone aware** - Proper timezone handling for each country
 - **Clean REST API** - Intuitive `/api/{country}/{timeframe}` structure
 - **OpenAPI documentation** - Full API specification with interactive docs
@@ -83,17 +83,19 @@ docker compose up -d
 
 ## 🌍 Supported countries
 
-| Code | Country     | Currency | Default VAT | Timezone          |
-| ---- | ----------- | -------- | ----------- | ----------------- |
-| `nl` | Netherlands | EUR      | 21%         | Europe/Amsterdam  |
-| `de` | Germany     | EUR      | 19%         | Europe/Berlin     |
-| `be` | Belgium     | EUR      | 21%         | Europe/Brussels   |
-| `fr` | France      | EUR      | 20%         | Europe/Paris      |
-| `at` | Austria     | EUR      | 20%         | Europe/Vienna     |
-| `ch` | Switzerland | CHF      | 7.7%        | Europe/Zurich     |
-| `dk` | Denmark     | DKK      | 25%         | Europe/Copenhagen |
-| `no` | Norway      | NOK      | 25%         | Europe/Oslo       |
-| `se` | Sweden      | SEK      | 25%         | Europe/Stockholm  |
+All prices are quoted in **EUR/kWh** regardless of country (this is how the underlying day-ahead markets settle). VAT is applied to that EUR price using the country-local rate.
+
+| Code | Country     | Default VAT | Timezone          |
+| ---- | ----------- | ----------- | ----------------- |
+| `nl` | Netherlands | 21%         | Europe/Amsterdam  |
+| `de` | Germany     | 19%         | Europe/Berlin     |
+| `be` | Belgium     | 21%         | Europe/Brussels   |
+| `fr` | France      | 20%         | Europe/Paris      |
+| `at` | Austria     | 20%         | Europe/Vienna     |
+| `ch` | Switzerland | 7.7%        | Europe/Zurich     |
+| `dk` | Denmark     | 25%         | Europe/Copenhagen |
+| `no` | Norway      | 25%         | Europe/Oslo       |
+| `se` | Sweden      | 25%         | Europe/Stockholm  |
 
 ## 🎯 Quick start examples
 

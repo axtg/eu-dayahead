@@ -10,12 +10,12 @@ info:
     - **Multiple Time Periods** - Today, next 24 hours, custom date ranges
     - **Provider Markups** - Built-in support for energy provider pricing
     - **Flexible VAT** - Country-specific VAT rates or custom percentages
-    - **Multi-Currency** - EUR, CHF, DKK, NOK, SEK support
+    - **EUR-quoted prices** - All zones return prices in EUR/kWh (markets settle in EUR)
     - **Timezone Aware** - Proper timezone handling for each country
 
     ## Data Sources
-    - **Primary**: Stekker.app - European energy price aggregator
-    - **Backup**: ENTSOE Transparency Platform - Official EU energy data
+    - **Primary**: ENTSOE Transparency Platform - Official EU day-ahead market data (requires API key)
+    - **Fallback**: Stekker.app - Used when ENTSOE is unavailable
   version: 1.0.0
   contact:
     name: API Support
@@ -203,7 +203,7 @@ components:
     FixedMarkup:
       name: markup
       in: query
-      description: Fixed markup per kWh in local currency (e.g., 0.024 for €0.024/kWh)
+      description: Fixed markup per kWh in EUR (e.g., 0.024 for €0.024/kWh)
       schema:
         type: number
         format: float
@@ -442,12 +442,12 @@ components:
         priceRaw:
           type: number
           format: float
-          description: Raw market price in local currency per MWh
+          description: Raw market price in EUR per MWh
           example: 87.12
         price:
           type: number
           format: float
-          description: Final price in local currency per kWh (including markup and VAT)
+          description: Final price in EUR per kWh (including markup and VAT)
           example: 0.13442
         hour:
           type: string
