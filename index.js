@@ -12,6 +12,7 @@ const { loggingMiddleware, logError } = require('./middleware/logging');
 // Import route handlers
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
+const docsRoutes = require('./routes/docs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -85,6 +86,7 @@ app.get('/openapi.yaml', (req, res) => {
 // Mount API route handlers - ORDER MATTERS!
 app.use('/api', rateLimiter, countryRoutes);
 app.use('/api/providers', rateLimiter, providerRoutes);
+app.use('/docs', docsRoutes);
 
 // Fallback to index.html for root
 app.get('/', (req, res) => {

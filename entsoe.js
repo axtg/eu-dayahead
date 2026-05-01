@@ -1,161 +1,174 @@
-// ENTSOE API for Dutch Energy Prices
-// Based on the entsoe.js implementation from powerhour
-
+// ENTSOE Transparency Platform client (day-ahead prices, documentType A44).
+// Returns hourly or quarterly prices in the {time, priceMwh, price} shape used by the rest of the app.
 const https = require('https');
-const parseXml = require('xml-js'); // You'll need: npm install xml-js
+const parseXml = require('xml-js');
+
+const { COUNTRIES } = require('./config/countries');
+
+const RESOLUTION_MINUTES = { PT15M: 15, PT30M: 30, PT60M: 60 };
 
 class EntsoeAPI {
-  constructor(apiKey) {
-    this.apiKey = apiKey; // Get free API key from: https://transparency.entsoe.eu/
+  constructor(apiKey, options = {}) {
+    this.apiKey = apiKey;
     this.host = 'web-api.tp.entsoe.eu';
     this.port = 443;
-    this.timeout = 30000;
-    this.biddingZone = '10YNL----------L'; // Netherlands
+    this.timeout = options.timeout || 15000;
   }
 
-  async getDutchPrices(dateStart, dateEnd) {
-    try {
-      const start = dateStart || new Date();
-      const end = dateEnd || new Date(Date.now() + 24 * 60 * 60 * 1000); // tomorrow
+  async getCountryPrices(countryCode, dateStart, dateEnd) {
+    const country = COUNTRIES[countryCode];
+    if (!country) throw new Error(`ENTSOE: unsupported country ${countryCode}`);
+    if (!this.apiKey) throw new Error('ENTSOE: no API key configured');
 
-      start.setMinutes(0, 0, 0);
-      end.setMinutes(0, 0, 0);
+    const start = new Date(dateStart);
+    const end = new Date(dateEnd);
+    start.setMinutes(0, 0, 0);
+    end.setMinutes(0, 0, 0);
 
-      const periodStart = start.toISOString().replace(/[-:T]/g, '').slice(0, 12);
-      const periodEnd = end.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    const periodStart = start.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    const periodEnd = end.toISOString().replace(/[-:T]/g, '').slice(0, 12);
 
-      const path =
-        `/api?securityToken=${this.apiKey}` +
-        '&documentType=A44' +
-        `&in_Domain=${this.biddingZone}` +
-        `&out_Domain=${this.biddingZone}` +
-        `&periodStart=${periodStart}` +
-        `&periodEnd=${periodEnd}`;
+    const path =
+      `/api?securityToken=${this.apiKey}` +
+      '&documentType=A44' +
+      `&in_Domain=${country.biddingZone}` +
+      `&out_Domain=${country.biddingZone}` +
+      `&periodStart=${periodStart}` +
+      `&periodEnd=${periodEnd}`;
 
-      const response = await this.makeRequest(path);
-      return this.parseResponse(response, start, end);
-    } catch (error) {
-      throw new Error(`ENTSOE API Error: ${error.message}`);
-    }
+    const xml = await this.makeRequest(path);
+    return this.parseResponse(xml, start, end);
   }
 
   async makeRequest(path) {
     return new Promise((resolve, reject) => {
-      const options = {
-        hostname: this.host,
-        port: this.port,
-        path: path,
-        method: 'GET',
-        timeout: this.timeout
-      };
-
-      const req = https.request(options, res => {
-        let body = '';
-        res.on('data', chunk => (body += chunk));
-        res.on('end', () => {
-          if (res.statusCode !== 200) {
-            reject(new Error(`HTTP ${res.statusCode}: ${body}`));
-            return;
-          }
-          resolve(body);
-        });
-      });
-
+      const req = https.request(
+        { hostname: this.host, port: this.port, path, method: 'GET', timeout: this.timeout },
+        res => {
+          let body = '';
+          res.on('data', chunk => (body += chunk));
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              const reason = (body.match(/<text>([^<]+)<\/text>/) || [])[1] || `HTTP ${res.statusCode}`;
+              return reject(new Error(`ENTSOE ${res.statusCode}: ${reason}`));
+            }
+            resolve(body);
+          });
+        }
+      );
       req.on('error', reject);
-      req.on('timeout', () => reject(new Error('Request timeout')));
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('ENTSOE request timeout'));
+      });
       req.end();
     });
   }
 
-  parseResponse(xmlData, start, end) {
-    const parseOptions = {
+  parseResponse(xmlData, windowStart, windowEnd) {
+    const json = parseXml.xml2js(xmlData, {
       compact: true,
       nativeType: true,
       ignoreDeclaration: true,
       ignoreAttributes: true
-    };
-
-    const json = parseXml.xml2js(xmlData, parseOptions);
-    const flatJson = this.flatten(json);
-
-    const prices = [];
-
-    if (flatJson.Publication_MarketDocument && flatJson.Publication_MarketDocument.TimeSeries) {
-      let timeSeries = flatJson.Publication_MarketDocument.TimeSeries;
-
-      // Handle multiple days
-      if (!Array.isArray(timeSeries)) {
-        timeSeries = [timeSeries];
-      }
-
-      timeSeries.forEach(day => {
-        if (day.Period && day.Period.resolution === 'PT60M') {
-          const startDate = new Date(day.Period.timeInterval.start);
-          const points = Array.isArray(day.Period.Point) ? day.Period.Point : [day.Period.Point];
-
-          points.forEach(point => {
-            const hour = point.position - 1;
-            const time = new Date(startDate);
-            time.setHours(time.getHours() + hour);
-
-            if (time >= start && time <= end) {
-              prices.push({
-                time: time.toISOString(),
-                price: parseFloat(point['price.amount']), // EUR/MWh
-                pricePerKwh: parseFloat(point['price.amount']) / 1000 // EUR/kWh
-              });
-            }
-          });
-        }
-      });
-    }
-
-    return prices.sort((a, b) => new Date(a.time) - new Date(b.time));
-  }
-
-  flatten(json, level = 1) {
-    if (level > 10) return json;
-
-    const flat = {};
-    Object.keys(json).forEach(key => {
-      if (key === '_attributes') {
-        Object.keys(json[key]).forEach(attr => {
-          flat[attr] = json[key][attr];
-        });
-        return;
-      }
-
-      flat[key] = json[key];
-      if (typeof json[key] === 'object' && json[key] !== null) {
-        if (Object.keys(json[key]).length === 1 && json[key]._text) {
-          flat[key] = json[key]._text;
-        } else if (Object.keys(json[key]).length > 0) {
-          flat[key] = this.flatten(json[key], level + 1);
-        }
-      }
     });
 
-    return flat;
+    const doc = json.Publication_MarketDocument;
+    if (!doc) {
+      const ack = json.Acknowledgement_MarketDocument;
+      if (ack) {
+        const code = textOf(ack.Reason?.code);
+        const text = textOf(ack.Reason?.text);
+        throw new Error(`ENTSOE acknowledgement ${code || ''}: ${text || 'no data'}`);
+      }
+      throw new Error('ENTSOE: unexpected response (no Publication_MarketDocument)');
+    }
+    if (doc.Reason) {
+      const code = textOf(doc.Reason.code);
+      const text = textOf(doc.Reason.text);
+      throw new Error(`ENTSOE reason ${code || ''}: ${text || 'no data'}`);
+    }
+
+    let timeSeries = doc.TimeSeries;
+    if (!timeSeries) return [];
+    if (!Array.isArray(timeSeries)) timeSeries = [timeSeries];
+
+    // Dedupe by ISO timestamp — multiple TimeSeries blocks (e.g. DE) can repeat the same intervals.
+    const byTime = new Map();
+
+    for (const series of timeSeries) {
+      let periods = series.Period;
+      if (!periods) continue;
+      if (!Array.isArray(periods)) periods = [periods];
+
+      for (const period of periods) {
+        const resolution = textOf(period.resolution);
+        const stepMin = RESOLUTION_MINUTES[resolution];
+        if (!stepMin) continue;
+
+        const startIso = textOf(period.timeInterval?.start);
+        if (!startIso) continue;
+        const periodStart = new Date(startIso);
+
+        let points = period.Point;
+        if (!points) continue;
+        if (!Array.isArray(points)) points = [points];
+
+        for (const point of points) {
+          const position = Number(textOf(point.position));
+          const amountRaw = textOf(point['price.amount']);
+          const amount = parseFloat(amountRaw);
+          if (!Number.isFinite(amount) || !Number.isFinite(position)) continue;
+
+          const time = new Date(periodStart.getTime() + (position - 1) * stepMin * 60_000);
+          if (windowStart && time < windowStart) continue;
+          if (windowEnd && time >= windowEnd) continue;
+
+          byTime.set(time.toISOString(), {
+            time: time.toISOString(),
+            priceMwh: amount,
+            price: amount / 1000,
+            resolutionMinutes: stepMin
+          });
+        }
+      }
+    }
+
+    return [...byTime.values()].sort((a, b) => new Date(a.time) - new Date(b.time));
+  }
+
+  // Backward-compat shim — the only consumer was the example block at the bottom of this file.
+  getDutchPrices(dateStart, dateEnd) {
+    return this.getCountryPrices('nl', dateStart, dateEnd);
   }
 }
 
-// Usage Example
-async function getDutchEnergyPrices() {
-  const apiKey = 'YOUR_ENTSOE_API_KEY'; // Get from https://transparency.entsoe.eu/
-  const entsoe = new EntsoeAPI(apiKey);
-
-  try {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const prices = await entsoe.getDutchPrices(today, tomorrow);
-    console.log('Dutch Energy Prices:', JSON.stringify(prices, null, 2));
-    return prices;
-  } catch (error) {
-    console.error('Error fetching prices:', error.message);
-  }
+function textOf(node) {
+  if (node == null) return null;
+  if (typeof node === 'object') return node._text ?? null;
+  return node;
 }
 
-// Export for use
-module.exports = { EntsoeAPI, getDutchEnergyPrices };
+module.exports = { EntsoeAPI };
+
+if (require.main === module) {
+  require('dotenv').config();
+  const apiKey = process.env.ENTSOE_API_KEY;
+  if (!apiKey) {
+    console.error('Set ENTSOE_API_KEY in .env');
+    process.exit(1);
+  }
+  const e = new EntsoeAPI(apiKey);
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 2);
+  e.getCountryPrices('nl', start, end)
+    .then(prices => {
+      console.log(`Got ${prices.length} prices, sample:`, prices.slice(0, 3));
+    })
+    .catch(err => {
+      console.error('Error:', err.message);
+      process.exit(1);
+    });
+}

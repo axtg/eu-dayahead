@@ -1,0 +1,18 @@
+{
+  "name": "EU Day-Ahead Electricity Prices",
+  "short_name": "EU Power Prices",
+  "description": "Live hourly day-ahead electricity prices and free REST API for 9 EU markets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

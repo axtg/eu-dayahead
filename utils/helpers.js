@@ -1,34 +1,65 @@
+const { fromZonedTime, toZonedTime } = require('date-fns-tz');
+const { startOfDay } = require('date-fns');
+
 const { COUNTRIES } = require('../config/countries');
 const { StekkerAPI } = require('../stekker');
+const { EntsoeAPI } = require('../entsoe');
 
-// In-memory cache for upstream raw prices (per country/time range)
-const CACHE_TTL_MS = parseInt(process.env.CACHE_TIMEOUT_MS || '3600000', 10); // default 1 hour
-const __rawCache = new Map(); // key -> { expiresAt, data }
+const ENTSOE_API_KEY = process.env.ENTSOE_API_KEY;
+const VALID_INTERVALS = new Set(['60M', '15M']);
 
-function cacheKey(countryCode, start, end, includeForecast) {
-  const norm = (d) => {
-    const x = new Date(d);
-    x.setMinutes(0, 0, 0);
-    return x.toISOString();
-  };
-  return `${countryCode}|${norm(start)}|${norm(end)}|${includeForecast ? '1' : '0'}`;
+// ENTSOE day-ahead auction results publish around 14:00 CET; pad to 14:30.
+// Day X+2 prices land in the afternoon of day X, so an entry created in the
+// morning needs to refresh after this boundary to pick them up.
+const ENTSOE_PUBLISH_HOUR_CET = 14;
+const ENTSOE_PUBLISH_MINUTE_CET = 30;
+const ENTSOE_PUBLISH_TZ = 'Europe/Brussels';
+
+// key -> { refreshAfter, data: { source, prices, upstreamErrors? } }
+const __rawCache = new Map();
+
+function localDateInTz(date, timezone) {
+  const z = toZonedTime(date, timezone);
+  const yyyy = z.getFullYear();
+  const mm = String(z.getMonth() + 1).padStart(2, '0');
+  const dd = String(z.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function getCachedRaw(countryCode, start, end, includeForecast) {
-  const key = cacheKey(countryCode, start, end, includeForecast);
-  const entry = __rawCache.get(key);
-  if (entry && entry.expiresAt > Date.now()) {
-    return entry.data;
-  }
-  return null;
+function dailyCacheKey(countryCode, now) {
+  return `${countryCode}|${localDateInTz(now, COUNTRIES[countryCode].timezone)}`;
 }
 
-function setCachedRaw(countryCode, start, end, includeForecast, data) {
-  const key = cacheKey(countryCode, start, end, includeForecast);
-  __rawCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, data });
+// Single canonical upstream window per country per day, wide enough to cover
+// /today, /next24h, and /next/N (N≤48). All endpoints filter the result
+// themselves; this is just the raw fetch boundary.
+function canonicalFetchWindow(countryCode, now) {
+  const tz = COUNTRIES[countryCode].timezone;
+  const todayStartInTz = startOfDay(toZonedTime(now, tz));
+  const startInTz = new Date(todayStartInTz);
+  startInTz.setDate(startInTz.getDate() - 1);
+  const endInTz = new Date(todayStartInTz);
+  endInTz.setDate(endInTz.getDate() + 3);
+  return { start: fromZonedTime(startInTz, tz), end: fromZonedTime(endInTz, tz) };
 }
 
-// Helper function to parse markup options from query parameters
+// Before today's 14:30 CET: refresh at 14:30 CET (so we pick up the next
+// auction). After 14:30 CET: cache is good until midnight in the country's
+// timezone, when the daily key rolls over and a fresh fetch happens.
+function computeRefreshAfter(countryCode, now) {
+  const country = COUNTRIES[countryCode];
+
+  const cetNow = toZonedTime(now, ENTSOE_PUBLISH_TZ);
+  const cetPublishToday = new Date(cetNow);
+  cetPublishToday.setHours(ENTSOE_PUBLISH_HOUR_CET, ENTSOE_PUBLISH_MINUTE_CET, 0, 0);
+  const publishUtc = fromZonedTime(cetPublishToday, ENTSOE_PUBLISH_TZ).getTime();
+  if (now.getTime() < publishUtc) return publishUtc;
+
+  const tomorrowStartInTz = startOfDay(toZonedTime(now, country.timezone));
+  tomorrowStartInTz.setDate(tomorrowStartInTz.getDate() + 1);
+  return fromZonedTime(tomorrowStartInTz, country.timezone).getTime();
+}
+
 function parseMarkupOptions(query, country) {
   const countryConfig = COUNTRIES[country] || COUNTRIES.nl;
   return {
@@ -40,45 +71,113 @@ function parseMarkupOptions(query, country) {
   };
 }
 
-// Helper function to validate country code
-function validateCountry(countryCode) {
-  if (!countryCode || !COUNTRIES[countryCode.toLowerCase()]) {
-    return null;
+function parseIntervalOption(query) {
+  const raw = query.interval;
+  if (raw === undefined || raw === null || raw === '') return '60M';
+  const normalised = String(raw).toUpperCase();
+  if (!VALID_INTERVALS.has(normalised)) {
+    const err = new Error(`Invalid interval '${raw}'. Valid values: 60M, 15M.`);
+    err.statusCode = 400;
+    throw err;
   }
+  return normalised;
+}
+
+function validateCountry(countryCode) {
+  if (!countryCode || !COUNTRIES[countryCode.toLowerCase()]) return null;
   return countryCode.toLowerCase();
 }
 
-// Helper function to get country-specific price fetcher (with raw cache)
-async function fetchCountryPrices(countryCode, dateStart, dateEnd, includeForecast, markupOptions) {
-  const country = COUNTRIES[countryCode];
-
-  // Create a country-specific Stekker instance
-  const countryStekker = new StekkerAPI();
-
-  // Monkey-patch the region for this request
-  const originalMakeRequest = countryStekker.makeRequest;
-  countryStekker.makeRequest = function (path) {
-    // Replace region=NL with the country's region
-    const modifiedPath = path.replace('region=NL', `region=${country.stekkerRegion}`);
-    return originalMakeRequest.call(this, modifiedPath);
-  };
-
-  // Try cache: store raw upstream prices (no markup), then apply markup per request
-  let raw = getCachedRaw(countryCode, dateStart, dateEnd, includeForecast);
-  if (!raw) {
-    // Fetch without markup to maximize cache reusability
-    raw = await countryStekker.getDutchPrices(dateStart, dateEnd, includeForecast, { fixedMarkup: 0, variableMarkup: 0, vat: 0, includeVat: false, roundTo: 5 });
-    setCachedRaw(countryCode, dateStart, dateEnd, includeForecast, raw);
+// Group prices into UTC-hourly buckets and return mean priceMwh per bucket.
+// UTC grouping is correct across DST: UTC has no DST, and local-hour boundaries align with UTC-hour
+// boundaries by an integer offset (incl. during DST transitions).
+function aggregateToHourly(prices) {
+  const buckets = new Map();
+  for (const p of prices) {
+    const t = new Date(p.time);
+    t.setUTCMinutes(0, 0, 0);
+    const key = t.toISOString();
+    const b = buckets.get(key) || { time: key, sum: 0, count: 0 };
+    b.sum += p.priceMwh;
+    b.count += 1;
+    buckets.set(key, b);
   }
-
-  // Apply markup per request on top of raw
-  const applied = countryStekker.applyMarkup(raw, markupOptions || {});
-  return applied;
+  return [...buckets.values()]
+    .sort((a, b) => new Date(a.time) - new Date(b.time))
+    .map(b => ({ time: b.time, priceMwh: b.sum / b.count, price: b.sum / b.count / 1000 }));
 }
 
-// Helper function to enrich prices with country-specific formatting
+async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) {
+  const country = COUNTRIES[countryCode];
+  const upstreamErrors = [];
+
+  if (ENTSOE_API_KEY) {
+    try {
+      const entsoe = new EntsoeAPI(ENTSOE_API_KEY);
+      const prices = await entsoe.getCountryPrices(countryCode, dateStart, dateEnd);
+      if (prices.length > 0) return { source: 'entsoe', prices };
+      upstreamErrors.push('entsoe: empty response');
+    } catch (e) {
+      upstreamErrors.push(`entsoe: ${e.message}`);
+    }
+  }
+
+  // Stekker fallback. Region is swapped per request via constructor in stekker.js (see below);
+  // here we just instantiate with the country's region.
+  const stekker = new StekkerAPI({ region: country.stekkerRegion });
+  const prices = await stekker.getDutchPrices(dateStart, dateEnd, includeForecast, {
+    fixedMarkup: 0,
+    variableMarkup: 0,
+    vat: 0,
+    includeVat: false,
+    roundTo: 5
+  });
+  return { source: 'stekker', prices, upstreamErrors: upstreamErrors.length ? upstreamErrors : undefined };
+}
+
+async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = {}) {
+  const interval = intervalOptions.interval || '60M';
+  const now = new Date();
+  const key = dailyCacheKey(countryCode, now);
+
+  let entry = __rawCache.get(key);
+  if (!entry || entry.refreshAfter <= Date.now()) {
+    const { start, end } = canonicalFetchWindow(countryCode, now);
+    const data = await fetchRawPrices(countryCode, start, end, false);
+    entry = { data, refreshAfter: computeRefreshAfter(countryCode, now) };
+    __rawCache.set(key, entry);
+  }
+  const cached = entry.data;
+
+  // Aggregate (or pass through) before markup so VAT/markup are applied to the displayed cadence.
+  const basePrices =
+    interval === '60M'
+      ? aggregateToHourly(cached.prices)
+      : cached.prices.map(p => ({ time: p.time, priceMwh: p.priceMwh, price: p.price }));
+
+  // Reuse Stekker's markup function as a pure utility — it doesn't depend on instance state.
+  const applied = new StekkerAPI().applyMarkup(basePrices, markupOptions || {});
+
+  const warnings = [];
+  if (cached.source === 'stekker') {
+    if (interval === '15M') {
+      warnings.push('fallback_source: stekker_quarterly (HH:00 quarters may carry stale hourly clearing prices)');
+    } else {
+      warnings.push('fallback_source: stekker');
+    }
+  }
+
+  return {
+    prices: applied,
+    source: cached.source,
+    resolutionMinutes: interval === '60M' ? 60 : 15,
+    warnings: warnings.length ? warnings : undefined
+  };
+}
+
 function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
   const country = COUNTRIES[countryCode];
+  const referenceTime = options.referenceTime ? new Date(options.referenceTime) : null;
 
   return prices.map((price, index) => {
     const hourTime = new Date(price.time);
@@ -97,9 +196,10 @@ function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
       })
     };
 
-    // Add additional info for spanning time periods
     if (options.includeSpanInfo) {
-      enriched.hourFromNow = index;
+      enriched.hourFromNow = referenceTime
+        ? Math.floor((hourTime.getTime() - referenceTime.getTime()) / 3_600_000)
+        : index;
       enriched.dayOfWeek = hourTime.toLocaleDateString('en-US', {
         timeZone: country.timezone,
         weekday: 'long'
@@ -118,11 +218,13 @@ function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
   });
 }
 
-// Helper function to build country response info
 function buildCountryResponse(countryCode, data, markupOptions, type, additionalInfo = {}) {
   const country = COUNTRIES[countryCode];
+  const { source, resolutionMinutes, warnings, ...rest } = additionalInfo;
+  const intervalCount = data.length;
+  const totalHours = resolutionMinutes === 15 ? Math.floor(intervalCount / 4) : intervalCount;
 
-  return {
+  const response = {
     status: 'success',
     country: {
       code: countryCode.toUpperCase(),
@@ -135,39 +237,51 @@ function buildCountryResponse(countryCode, data, markupOptions, type, additional
     fetchedAt: new Date().toISOString(),
     info: {
       type,
-      totalHours: data.length,
+      totalIntervals: intervalCount,
+      totalHours,
+      resolutionMinutes: resolutionMinutes || 60,
       priceUnit: `${country.currency}/kWh`,
       timezone: country.timezone,
-      ...additionalInfo
+      source: source || 'entsoe',
+      ...rest
     }
   };
+
+  if (warnings && warnings.length) response.warnings = warnings;
+  return response;
 }
 
 function getCacheStats() {
   const now = Date.now();
   let size = 0;
   const byCountry = {};
-  let earliestExpiry = null;
+  const bySource = {};
+  let nextRefresh = null;
   for (const [key, entry] of __rawCache.entries()) {
-    if (entry.expiresAt <= now) continue; // consider expired entries as absent
+    if (entry.refreshAfter <= now) continue;
     size += 1;
     const country = key.split('|')[0];
     byCountry[country] = (byCountry[country] || 0) + 1;
-    if (!earliestExpiry || entry.expiresAt < earliestExpiry) earliestExpiry = entry.expiresAt;
+    const src = entry.data?.source || 'unknown';
+    bySource[src] = (bySource[src] || 0) + 1;
+    if (!nextRefresh || entry.refreshAfter < nextRefresh) nextRefresh = entry.refreshAfter;
   }
   return {
     size,
-    ttlMs: CACHE_TTL_MS,
+    strategy: 'daily-key + refresh-after-publish',
     byCountry,
-    earliestExpiry: earliestExpiry ? new Date(earliestExpiry).toISOString() : null
+    bySource,
+    nextRefresh: nextRefresh ? new Date(nextRefresh).toISOString() : null
   };
 }
 
 module.exports = {
   parseMarkupOptions,
+  parseIntervalOption,
   validateCountry,
   fetchCountryPrices,
   enrichPricesWithCountryInfo,
   buildCountryResponse,
+  aggregateToHourly,
   getCacheStats
 };

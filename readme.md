@@ -6,7 +6,10 @@
 
 A comprehensive REST API for fetching real-time electricity prices across 9 European countries, with support for energy provider markups, VAT calculations, and flexible time periods.
 
-**🚀 [Try the hosted version at dap.xadi.eu](https://dap.xadi.eu)**
+## 🧭 Two ways to use this
+
+1. **Hosted** — go to **[dap.xadi.eu](https://dap.xadi.eu)** for the interactive UI, or call the public API directly: `curl https://dap.xadi.eu/api/nl/today`. No account or key needed; rate-limited and subject to the usage terms shown in the API modal.
+2. **Self-hosted** — clone this repo, run `npm install && npm start`, and point requests at your own instance. For production use, register at [ENTSOE](https://transparency.entsoe.eu/) and set `ENTSOE_API_KEY` in `.env`. Same UI, same API, your infrastructure.
 
 ## 🚀 Features
 
@@ -60,12 +63,12 @@ CACHE_TIMEOUT_MS=3600000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-**Getting an ENTSOE API Key (recommended):**
+**Getting an ENTSOE API Key (required for production):**
 
 1. Register at [ENTSOE Transparency Platform](https://transparency.entsoe.eu/)
-2. Request API access (free, takes 1-3 business days)
-3. Add your API key to `.env`
-4. Restart the server - it will automatically use ENTSOE as primary data source
+2. Email `transparency@entsoe.eu` to request API access (free, 1–3 business days). Registration alone does not grant API access.
+3. Add your API key to `.env` as `ENTSOE_API_KEY=…`
+4. Restart the server. ENTSOE is the primary data source; if the key is missing or ENTSOE is unavailable, the server falls back to scraping Stekker.app (limited country coverage and known stale-quarter artifacts at HH:00).
 
 ### 🐳 Docker setup
 
@@ -145,12 +148,13 @@ curl http://localhost:3000/api/countries
 
 ## 📊 Query parameters
 
-| Parameter                 | Type    | Description                | Example          |
-| ------------------------- | ------- | -------------------------- | ---------------- |
-| `markup` or `fixedMarkup` | Number  | Fixed markup per kWh       | `0.024`          |
-| `vat`                     | Number  | VAT as decimal             | `0.21` (for 21%) |
-| `autoVat`                 | Boolean | Use country's default VAT  | `true`           |
-| `roundTo`                 | Integer | Decimal places to round to | `5` (default)    |
+| Parameter                 | Type    | Description                                                                                       | Example          |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------- | ---------------- |
+| `markup` or `fixedMarkup` | Number  | Fixed markup per kWh                                                                              | `0.024`          |
+| `vat`                     | Number  | VAT as decimal                                                                                    | `0.21` (for 21%) |
+| `autoVat`                 | Boolean | Use country's default VAT                                                                         | `true`           |
+| `roundTo`                 | Integer | Decimal places to round to                                                                        | `5` (default)    |
+| `interval`                | String  | Granularity: `60M` (default; hourly mean) or `15M` (quarter-hour pass-through, ~96 entries/day)   | `60M`            |
 
 ## 💡 Usage examples
 
@@ -291,8 +295,8 @@ const PROVIDER_PRESETS = {
 
 ## 🔗 Data sources
 
-- **Primary**: [ENTSOE Transparency Platform](https://transparency.entsoe.eu) - Official EU energy data (requires API key)
-- **Backup**: [Stekker.app](https://stekker.app) - European energy price aggregator
+- **Primary**: [ENTSOE Transparency Platform](https://transparency.entsoe.eu) — Official EU day-ahead market data (requires API key). Returns quarter-hour resolution (`PT15M`) for most zones, hourly (`PT60M`) for Switzerland. The default `?interval=60M` aggregates quarters to hourly means; `?interval=15M` passes them through.
+- **Fallback**: [Stekker.app](https://stekker.app) — Used only when ENTSOE is unavailable or no key is configured. Limited country coverage (Stekker rejects several non-NL bidding zones such as `DE-LU`) and a known artifact: settled HH:00 quarters can carry a stale hourly clearing price. When Stekker serves a response, the body includes a top-level `warnings` array.
 
 ## ⚡ Performance
 

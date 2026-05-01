@@ -3,32 +3,111 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>European Electricity Prices Live | Day-Ahead Energy Market Tracker | 9 EU Countries</title>
-    <meta name="description" content="Real-time European electricity day-ahead prices across 9 EU countries. Track hourly energy costs, compare markets, calculate VAT & markup. Free API for Netherlands, Germany, France, Belgium & more.">
+    <title>EU Day-Ahead Electricity Prices — Live Tracker &amp; Free API</title>
+    <meta name="description" content="Live hourly day-ahead electricity prices across 9 EU markets (NL, DE, BE, FR, AT, CH, DK, NO, SE). Free REST API with markup and VAT support." />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="canonical" href="/" />
+    <meta name="theme-color" content="#111827" />
+    <link rel="canonical" href="https://dap.xadi.eu/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="/favicon.svg" color="#111827" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="EU Day-Ahead Power Prices" />
-    <meta property="og:description" content="Interactive EU day-ahead power prices. Netherlands default. Add markup and VAT." />
+    <meta property="og:title" content="EU Day-Ahead Electricity Prices — Live Tracker &amp; Free API" />
+    <meta property="og:description" content="Live hourly day-ahead electricity prices across 9 EU markets. Free REST API with markup and VAT support." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="/" />
+    <meta property="og:url" content="https://dap.xadi.eu/" />
+    <meta property="og:site_name" content="EU Day-Ahead Power Prices" />
+    <meta property="og:locale" content="en" />
+    <meta property="og:image" content="https://dap.xadi.eu/og-image.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="EU day-ahead electricity prices — live chart for 9 EU markets" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="EU Day-Ahead Power Prices" />
-    <meta name="twitter:description" content="Interactive EU day-ahead power prices. Netherlands default. Add markup and VAT." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="EU Day-Ahead Electricity Prices — Live Tracker &amp; Free API" />
+    <meta name="twitter:description" content="Live hourly day-ahead electricity prices across 9 EU markets. Free REST API with markup and VAT support." />
+    <meta name="twitter:image" content="https://dap.xadi.eu/og-image.svg" />
+    <meta name="twitter:image:alt" content="EU day-ahead electricity prices — live chart for 9 EU markets" />
 
-    <!-- JSON-LD (Website) -->
+    <!-- JSON-LD -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "EU Day-Ahead Power Prices",
-        "url": "/"
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://dap.xadi.eu/#website",
+            "name": "EU Day-Ahead Power Prices",
+            "url": "https://dap.xadi.eu/",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://xadi.eu/#org" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://xadi.eu/#org",
+            "name": "XADI",
+            "url": "https://xadi.eu",
+            "email": "sales@xadi.nl"
+          },
+          {
+            "@type": "WebAPI",
+            "@id": "https://dap.xadi.eu/#api",
+            "name": "EU Day-Ahead Electricity Prices API",
+            "description": "Free REST API returning hourly day-ahead electricity prices for 9 EU markets, with optional markup and VAT.",
+            "url": "https://dap.xadi.eu/",
+            "documentation": "https://dap.xadi.eu/openapi.yaml",
+            "termsOfService": "https://dap.xadi.eu/#terms",
+            "provider": { "@id": "https://xadi.eu/#org" },
+            "isAccessibleForFree": true,
+            "license": "https://opensource.org/licenses/MIT"
+          },
+          {
+            "@type": "Dataset",
+            "@id": "https://dap.xadi.eu/#dataset",
+            "name": "European Day-Ahead Electricity Prices",
+            "description": "Hourly day-ahead electricity prices in EUR/kWh for the Netherlands, Germany, Belgium, France, Austria, Switzerland, Denmark, Norway, and Sweden. Sourced from the ENTSOE Transparency Platform via stekker.app and refreshed hourly.",
+            "url": "https://dap.xadi.eu/",
+            "keywords": [
+              "day-ahead electricity prices",
+              "EPEX",
+              "ENTSOE",
+              "energy market",
+              "Netherlands",
+              "Germany",
+              "Belgium",
+              "France",
+              "Austria",
+              "Switzerland",
+              "Denmark",
+              "Norway",
+              "Sweden"
+            ],
+            "license": "https://opensource.org/licenses/MIT",
+            "isAccessibleForFree": true,
+            "creator": { "@id": "https://xadi.eu/#org" },
+            "distribution": [
+              {
+                "@type": "DataDownload",
+                "encodingFormat": "application/json",
+                "contentUrl": "https://dap.xadi.eu/api/nl/today"
+              },
+              {
+                "@type": "DataDownload",
+                "encodingFormat": "application/yaml",
+                "contentUrl": "https://dap.xadi.eu/openapi.yaml"
+              }
+            ],
+            "spatialCoverage": {
+              "@type": "Place",
+              "name": "Europe (NL, DE, BE, FR, AT, CH, DK, NO, SE)"
+            },
+            "temporalCoverage": "PT1H"
+          }
+        ]
       }
     </script>
 
@@ -243,6 +322,8 @@
           <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
             <p>This comprehensive tool provides real-time European electricity day-ahead prices across 9 EU countries, helping consumers, businesses, and energy traders understand electricity costs and optimize their energy usage. Track hourly electricity prices, compare energy costs across European markets, and calculate total costs including VAT and energy provider markups.</p>
 
+            <p class="text-sm bg-gray-50 border border-gray-200 rounded-lg p-3"><strong>Two ways to use this:</strong> use this hosted instance directly (UI on this page, or call the API at <code>dap.xadi.eu/api/...</code>), or self-host from the <a href="https://github.com/axtg/eu-dayahead" class="text-blue-600 hover:text-blue-800">open-source repository</a> with your own ENTSOE API key.</p>
+
             <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Supported European Energy Markets</h3>
             <div class="grid grid-cols-2 gap-2 text-sm">
               <div>🇳🇱 Netherlands - Dutch electricity market (21% VAT)</div>
@@ -358,6 +439,12 @@
                     <td class="px-3 py-2">Decimal places (default: 5)</td>
                     <td class="px-3 py-2 font-mono">3</td>
                   </tr>
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-blue-600">interval</td>
+                    <td class="px-3 py-2">enum</td>
+                    <td class="px-3 py-2"><code>60M</code> (default, hourly mean) or <code>15M</code> (quarter-hour pass-through)</td>
+                    <td class="px-3 py-2 font-mono">15M</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -365,10 +452,10 @@
             <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Rate Limiting</h3>
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <ul class="list-disc list-inside space-y-1 text-sm">
-                <li><strong>Rate limit:</strong> 100 requests per minute per IP</li>
-                <li><strong>Burst limit:</strong> 10 requests per second</li>
+                <li><strong>Rate limit:</strong> 10 requests per second per IP (configurable)</li>
+                <li><strong>Headers:</strong> <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, <code>X-RateLimit-Reset</code>; 429 includes <code>Retry-After</code></li>
                 <li><strong>Data updates:</strong> Hourly from official sources</li>
-                <li><strong>Cache:</strong> Responses cached for 5 minutes</li>
+                <li><strong>Cache:</strong> Upstream responses cached for 1 hour; markup/VAT applied per request</li>
               </ul>
             </div>
 

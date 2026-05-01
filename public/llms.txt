@@ -1,0 +1,81 @@
+# EU Day-Ahead Electricity Prices
+
+> Free, public REST API and landing page for live day-ahead electricity
+> prices across 9 European markets (NL, DE, BE, FR, AT, CH, DK, NO, SE).
+> Responses are hourly (or quarter-hour) EUR/kWh prices with optional
+> markup and VAT applied per request.
+
+Site: https://dap.xadi.eu/
+OpenAPI: https://dap.xadi.eu/openapi.yaml
+Source: https://github.com/axtg/eu-dayahead
+Contact: hello@xadi.nl
+License: MIT (code) · Data attribution: ENTSOE Transparency Platform, stekker.app
+
+## Two ways to use this
+
+1. **Hosted** — open https://dap.xadi.eu/ for the interactive UI, or call the
+   public API directly (e.g. `curl https://dap.xadi.eu/api/nl/today`). No
+   account or API key required. Subject to the rate limit and usage terms below.
+2. **Self-hosted** — clone https://github.com/axtg/eu-dayahead, run
+   `npm install && npm start`, and point requests at your own instance. For
+   production use, register at https://transparency.entsoe.eu/ and set
+   `ENTSOE_API_KEY` in `.env`. Same UI, same API, your infrastructure.
+
+## Data sources
+
+- **Primary**: ENTSOE Transparency Platform (requires an API key when
+  self-hosting). Quarter-hour resolution for most zones, hourly for
+  Switzerland. The default `interval=60M` aggregates quarters to hourly means.
+- **Fallback**: stekker.app — used only when ENTSOE is unavailable or no key
+  is configured. Limited country coverage (rejects several non-NL bidding
+  zones such as DE-LU) and a known artifact at HH:00 quarters. When Stekker
+  serves the response, the body includes a top-level `warnings` array.
+
+## Endpoints
+
+- GET /api/countries — list supported countries with metadata
+- GET /api/{country}/today — today's 24 hourly prices in the country's local timezone
+- GET /api/{country}/next24h — the next 24 hours starting from the current hour
+- GET /api/{country}/next/{hours} — the next N hours (1–48)
+- GET /api/providers — list supported provider markup presets
+- GET /api/providers/next-energy — Netherlands Next Energy preset
+- GET /api/providers/{provider}/{country} — apply a provider preset to any country
+- GET /health — service health
+- GET /health/cache — upstream cache statistics
+- GET /openapi.yaml — full OpenAPI 3 specification
+
+## Path parameters
+
+- {country} — ISO-2 lowercase: nl, de, be, fr, at, ch, dk, no, se
+- {provider} — slug: next-energy, vattenfall, eneco
+
+## Query parameters
+
+- markup (decimal, EUR/kWh) — fixed per-kWh markup; alias: fixedMarkup
+- variableMarkup (decimal) — proportional markup, e.g. 0.05 = +5%
+- vat (decimal) — VAT factor, e.g. 0.21 for 21%; or "auto" to use country default
+- autoVat (boolean) — true to apply the country's default VAT
+- includeVat (boolean) — return VAT-inclusive prices
+- roundTo (integer, default 5) — number of decimal places in returned prices
+- interval (enum) — granularity of the returned series:
+    - `60M` (default) — hourly mean of the underlying quarter-hour values
+    - `15M` — pass-through quarter-hour values (~4× more entries per window)
+  Invalid values return HTTP 400.
+
+## Rate limits
+
+- Per-IP token bucket: 10 requests per second (default)
+- Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+- 429 responses include Retry-After
+
+## Caching
+
+- Upstream raw responses are cached for 1 hour, keyed by country + window.
+- Markup and VAT are applied per request after cache lookup, so changing
+  these parameters never re-hits the upstream.
+
+## Usage terms
+
+- Free for personal, research, educational, and other non-commercial use.
+- For commercial or high-volume use: contact sales@xadi.nl.
+- When redistributing prices, attribute ENTSOE Transparency Platform and stekker.app.

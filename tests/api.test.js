@@ -293,6 +293,57 @@ describe('European Energy Prices API', () => {
       }, 15000);
     });
   });
+
+  describe('Interval parameter', () => {
+    test('default response has resolutionMinutes=60 and 24 entries on /today', async () => {
+      const response = await request(app).get('/api/nl/today').expect(200);
+      expect(response.body.info.resolutionMinutes).toBe(60);
+      expect(response.body.info.totalIntervals).toBe(24);
+      expect(response.body.info.totalHours).toBe(24);
+      expect(response.body.data.length).toBe(24);
+    }, 15000);
+
+    test('?interval=60M is equivalent to default', async () => {
+      const response = await request(app).get('/api/nl/today?interval=60M').expect(200);
+      expect(response.body.info.resolutionMinutes).toBe(60);
+      expect(response.body.data.length).toBe(24);
+    }, 15000);
+
+    test('?interval=15M returns ~96 quarter-hour entries with resolutionMinutes=15', async () => {
+      const response = await request(app).get('/api/nl/today?interval=15M').expect(200);
+      expect(response.body.info.resolutionMinutes).toBe(15);
+      // Allow a small tolerance: upstream may be missing a few quarters near "now".
+      expect(response.body.data.length).toBeGreaterThanOrEqual(80);
+      expect(response.body.data.length).toBeLessThanOrEqual(96);
+      expect(response.body.info.totalIntervals).toBe(response.body.data.length);
+    }, 15000);
+
+    test('?interval=garbage returns 400 with descriptive error', async () => {
+      const response = await request(app).get('/api/nl/today?interval=foo').expect(400);
+      expect(response.body.status).toBe('error');
+      expect(response.body.message).toMatch(/interval/i);
+    });
+
+    test('15M next24h: hourFromNow values floor to the hour', async () => {
+      const response = await request(app).get('/api/nl/next24h?interval=15M').expect(200);
+      if (response.body.data.length === 0) return; // upstream may have no data; skip assertion
+      // First 4 quarters should all share hourFromNow=0
+      const firstHourQuarters = response.body.data.filter(p => p.hourFromNow === 0);
+      expect(firstHourQuarters.length).toBeGreaterThanOrEqual(1);
+      expect(firstHourQuarters.length).toBeLessThanOrEqual(4);
+    }, 15000);
+
+    test('response.info.source is one of {entsoe, stekker}', async () => {
+      const response = await request(app).get('/api/nl/today').expect(200);
+      expect(['entsoe', 'stekker']).toContain(response.body.info.source);
+      // warnings should only appear on fallback
+      if (response.body.info.source === 'stekker') {
+        expect(Array.isArray(response.body.warnings)).toBe(true);
+      } else {
+        expect(response.body.warnings).toBeUndefined();
+      }
+    }, 15000);
+  });
 });
 
 // Helper function to test if server starts correctly

@@ -1,9 +1,11 @@
 // tests/helpers.test.js - Unit tests for helper functions
 const {
   parseMarkupOptions,
+  parseIntervalOption,
   validateCountry,
   enrichPricesWithCountryInfo,
-  buildCountryResponse
+  buildCountryResponse,
+  aggregateToHourly
 } = require('../utils/helpers');
 
 describe('Helper Functions', () => {
@@ -145,6 +147,108 @@ describe('Helper Functions', () => {
       const result = buildCountryResponse('nl', mockData, mockMarkup, 'test', additionalInfo);
 
       expect(result.info).toHaveProperty('customField', 'customValue');
+    });
+
+    test('should set resolutionMinutes and totalIntervals/totalHours for 15M', () => {
+      const data96 = Array.from({ length: 96 }, () => ({ price: 0.1 }));
+      const result = buildCountryResponse('nl', data96, mockMarkup, 'today', { resolutionMinutes: 15 });
+      expect(result.info.resolutionMinutes).toBe(15);
+      expect(result.info.totalIntervals).toBe(96);
+      expect(result.info.totalHours).toBe(24);
+    });
+
+    test('should default resolutionMinutes to 60 and equal totalHours/totalIntervals for hourly', () => {
+      const data24 = Array.from({ length: 24 }, () => ({ price: 0.1 }));
+      const result = buildCountryResponse('nl', data24, mockMarkup, 'today');
+      expect(result.info.resolutionMinutes).toBe(60);
+      expect(result.info.totalIntervals).toBe(24);
+      expect(result.info.totalHours).toBe(24);
+    });
+
+    test('should attach warnings array when provided', () => {
+      const result = buildCountryResponse('nl', [{ price: 0.1 }], mockMarkup, 'today', {
+        warnings: ['fallback_source: stekker']
+      });
+      expect(result.warnings).toEqual(['fallback_source: stekker']);
+    });
+
+    test('should omit warnings field when none provided', () => {
+      const result = buildCountryResponse('nl', [{ price: 0.1 }], mockMarkup, 'today');
+      expect(result).not.toHaveProperty('warnings');
+    });
+  });
+
+  describe('parseIntervalOption', () => {
+    test('defaults to 60M when missing', () => {
+      expect(parseIntervalOption({})).toBe('60M');
+      expect(parseIntervalOption({ interval: '' })).toBe('60M');
+    });
+
+    test('accepts 60M and 15M (case-insensitive)', () => {
+      expect(parseIntervalOption({ interval: '60M' })).toBe('60M');
+      expect(parseIntervalOption({ interval: '15m' })).toBe('15M');
+    });
+
+    test('throws statusCode-400 error on invalid value', () => {
+      try {
+        parseIntervalOption({ interval: '5M' });
+        throw new Error('should have thrown');
+      } catch (err) {
+        expect(err.statusCode).toBe(400);
+        expect(err.message).toMatch(/interval/i);
+      }
+    });
+  });
+
+  describe('aggregateToHourly', () => {
+    test('averages four quarters into one hourly bucket', () => {
+      const quarters = [
+        { time: '2025-05-23T10:00:00.000Z', priceMwh: 100 },
+        { time: '2025-05-23T10:15:00.000Z', priceMwh: 120 },
+        { time: '2025-05-23T10:30:00.000Z', priceMwh: 80 },
+        { time: '2025-05-23T10:45:00.000Z', priceMwh: 100 }
+      ];
+      const result = aggregateToHourly(quarters);
+      expect(result).toHaveLength(1);
+      expect(result[0].time).toBe('2025-05-23T10:00:00.000Z');
+      expect(result[0].priceMwh).toBe(100);
+      expect(result[0].price).toBeCloseTo(0.1, 6);
+    });
+
+    test('passes through PT60M data unchanged (single point per hour)', () => {
+      const hourly = [
+        { time: '2025-05-23T10:00:00.000Z', priceMwh: 50 },
+        { time: '2025-05-23T11:00:00.000Z', priceMwh: 75 }
+      ];
+      const result = aggregateToHourly(hourly);
+      expect(result).toHaveLength(2);
+      expect(result[0].priceMwh).toBe(50);
+      expect(result[1].priceMwh).toBe(75);
+    });
+
+    test('handles partial-hour buckets (only 2 of 4 quarters present)', () => {
+      const partial = [
+        { time: '2025-05-23T10:00:00.000Z', priceMwh: 100 },
+        { time: '2025-05-23T10:30:00.000Z', priceMwh: 200 }
+      ];
+      const result = aggregateToHourly(partial);
+      expect(result).toHaveLength(1);
+      expect(result[0].priceMwh).toBe(150);
+    });
+
+    test('groups across UTC hour boundaries correctly', () => {
+      const cross = [
+        { time: '2025-05-23T10:45:00.000Z', priceMwh: 100 },
+        { time: '2025-05-23T11:00:00.000Z', priceMwh: 200 }
+      ];
+      const result = aggregateToHourly(cross);
+      expect(result).toHaveLength(2);
+      expect(result[0].time).toBe('2025-05-23T10:00:00.000Z');
+      expect(result[1].time).toBe('2025-05-23T11:00:00.000Z');
+    });
+
+    test('returns empty array on empty input', () => {
+      expect(aggregateToHourly([])).toEqual([]);
     });
   });
 });

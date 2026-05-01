@@ -4,7 +4,7 @@ const router = express.Router();
 const { fromZonedTime, toZonedTime } = require('date-fns-tz');
 const { startOfDay, endOfDay, addDays } = require('date-fns');
 
-const { fetchCountryPrices, buildCountryResponse } = require('../utils/helpers');
+const { fetchCountryPrices, buildCountryResponse, parseIntervalOption } = require('../utils/helpers');
 
 // Next Energy preset (Netherlands)
 router.get('/next-energy', async (req, res) => {
@@ -25,22 +25,37 @@ router.get('/next-energy', async (req, res) => {
     const today = fromZonedTime(todayStartInTargetTz, country.timezone);
     const tomorrow = fromZonedTime(tomorrowEndInTargetTz, country.timezone);
 
-    const prices = await fetchCountryPrices('nl', today, tomorrow, false, {
-      fixedMarkup: 0.024,
-      vat: 0.21 // 21% VAT as decimal
+    let interval;
+    try {
+      interval = parseIntervalOption(req.query);
+    } catch (err) {
+      if (err.statusCode) return res.status(err.statusCode).json({ status: 'error', message: err.message });
+      throw err;
+    }
+
+    const result = await fetchCountryPrices('nl', { fixedMarkup: 0.024, vat: 0.21 }, { interval });
+
+    const windowPrices = result.prices.filter(p => {
+      const t = new Date(p.time);
+      return t >= today && t <= tomorrow;
     });
 
     res.json({
       status: 'success',
       provider: 'Next Energy',
       country: { code: 'NL', name: 'Netherlands', currency: 'EUR' },
-      data: prices,
+      data: windowPrices,
       markup: {
         fixed: 0.024,
         vat: 0.21,
         vatPercent: '21%',
         description: 'Next Energy standard markup with Dutch VAT'
       },
+      info: {
+        source: result.source,
+        resolutionMinutes: result.resolutionMinutes
+      },
+      ...(result.warnings ? { warnings: result.warnings } : {}),
       fetchedAt: new Date().toISOString()
     });
   } catch (error) {
@@ -116,12 +131,29 @@ router.get('/:provider/:country', async (req, res) => {
       markupOptions.vat = countryConfig.defaultVat;
     }
 
-    const prices = await fetchCountryPrices(country.toLowerCase(), today, tomorrow, false, markupOptions);
+    let interval;
+    try {
+      interval = parseIntervalOption(req.query);
+    } catch (err) {
+      if (err.statusCode) return res.status(err.statusCode).json({ status: 'error', message: err.message });
+      throw err;
+    }
+
+    const result = await fetchCountryPrices(country.toLowerCase(), markupOptions, { interval });
+
+    const windowPrices = result.prices.filter(p => {
+      const t = new Date(p.time);
+      return t >= today && t <= tomorrow;
+    });
 
     const response = {
       status: 'success',
       provider: providerConfig.name,
-      ...buildCountryResponse(country.toLowerCase(), prices, markupOptions, 'provider-preset')
+      ...buildCountryResponse(country.toLowerCase(), windowPrices, markupOptions, 'provider-preset', {
+        source: result.source,
+        resolutionMinutes: result.resolutionMinutes,
+        warnings: result.warnings
+      })
     };
 
     res.json(response);

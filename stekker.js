@@ -4,11 +4,11 @@
 const https = require('https');
 
 class StekkerAPI {
-  constructor() {
+  constructor(options = {}) {
     this.host = 'stekker.app';
     this.port = 443;
-    this.timeout = 30000;
-    this.biddingZone = '10YNL----------L'; // Netherlands
+    this.timeout = options.timeout || 30000;
+    this.region = options.region || 'NL';
   }
 
   async getDutchPrices(dateStart, dateEnd, includeForecast = false, options = {}) {
@@ -17,8 +17,9 @@ class StekkerAPI {
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
 
-      const start = dateStart || today;
-      const end = dateEnd || tomorrow;
+      // Clone caller-owned Dates before mutating.
+      const start = new Date(dateStart || today);
+      const end = new Date(dateEnd || tomorrow);
 
       start.setMinutes(0, 0, 0);
       end.setDate(end.getDate() + 1); // Include full end day
@@ -26,8 +27,7 @@ class StekkerAPI {
       const startDate = start.toISOString();
       const endDate = end.toISOString();
 
-      // Construct API path
-      let path = '/epex-forecast?advanced_view=&region=NL&unit=MWh';
+      let path = `/epex-forecast?advanced_view=&region=${encodeURIComponent(this.region)}&unit=MWh`;
       if (!includeForecast) {
         path += `&filter_from=${startDate}&filter_to=${endDate}`;
       }
@@ -35,7 +35,6 @@ class StekkerAPI {
       const response = await this.makeRequest(path);
       const prices = this.parseResponse(response, start, end, includeForecast);
 
-      // Apply markup if provided
       return this.applyMarkup(prices, options);
     } catch (error) {
       throw new Error(`Stekker API Error: ${error.message}`);

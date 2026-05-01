@@ -4,3 +4,5 @@ Allow: /
 # Avoid crawling API endpoints directly
 Disallow: /api/
 
+Sitemap: https://dap.xadi.eu/sitemap.xml
+
