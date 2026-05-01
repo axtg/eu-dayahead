@@ -194,7 +194,7 @@
 
       <!-- Controls -->
       <section aria-label="Chart controls" class="mb-8">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-7 gap-3">
           <label class="block">
             <span class="block text-xs text-gray-600 mb-1.5">Country</span>
             <select id="country" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black">
@@ -235,6 +235,15 @@
               <button id="tfToday" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
             </div>
             <input type="hidden" id="timeframe" value="next24h" />
+          </div>
+
+          <div class="block min-w-0 md:col-span-1 lg:col-span-2">
+            <span class="block text-xs text-gray-600 mb-1.5">Resolution</span>
+            <div class="flex w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm" role="group" aria-label="Resolution switch">
+              <button id="intvHourly" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white hover:bg-gray-800 focus:ring-2 focus:ring-black" aria-pressed="true">Hourly</button>
+              <button id="intv15M" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">15-min</button>
+            </div>
+            <input type="hidden" id="interval" value="60M" />
           </div>
         </div>
       </section>
