@@ -348,7 +348,7 @@ npm run validate-api
 
 The project includes a complete GitHub Actions workflow:
 
-- **Automated Testing** - Runs on Node.js 16, 18, and 20
+- **Automated Testing** - Runs on Node.js 22 and 24
 - **Code Quality** - ESLint, security audits, and coverage reports
 - **API Validation** - Validates OpenAPI specification
 - **Docker Build** - Builds and pushes Docker images
