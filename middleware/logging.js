@@ -41,37 +41,42 @@ const loggingMiddleware = (req, res, next) => {
   res.end = function (chunk, encoding) {
     const responseTime = Date.now() - startTime;
 
-    // Log structured data to Better Stack
-    const logData = {
-      dt: new Date().toISOString(), // Better Stack expects 'dt' for timestamp
-      level: res.statusCode >= 400 ? 'error' : 'info',
-      message: `${req.method} ${req.originalUrl} - ${res.statusCode}`,
-      method: req.method,
-      url: req.originalUrl,
-      path: req.path,
-      statusCode: res.statusCode,
-      responseTime: responseTime,
-      userAgent: req.get('User-Agent') || 'Unknown',
-      ip: req.ip || req.connection.remoteAddress || req.socket.remoteAddress,
-      referrer: req.get('Referrer'),
-      country: req.params.country || null,
-      endpoint: req.route?.path || req.path,
-      query: Object.keys(req.query).length > 0 ? req.query : null,
-      contentLength: res.get('Content-Length') || 0,
-      service: 'eu-dayahead-api',
-      environment: process.env.NODE_ENV || 'development'
-    };
+    // Logging must never prevent the response from being delivered
+    try {
+      // Log structured data to Better Stack
+      const logData = {
+        dt: new Date().toISOString(), // Better Stack expects 'dt' for timestamp
+        level: res.statusCode >= 400 ? 'error' : 'info',
+        message: `${req.method} ${req.originalUrl} - ${res.statusCode}`,
+        method: req.method,
+        url: req.originalUrl,
+        path: req.path,
+        statusCode: res.statusCode,
+        responseTime: responseTime,
+        userAgent: req.get('User-Agent') || 'Unknown',
+        ip: req.ip || req.connection.remoteAddress || req.socket.remoteAddress,
+        referrer: req.get('Referrer'),
+        country: req.params?.country || null,
+        endpoint: req.route?.path || req.path,
+        query: Object.keys(req.query).length > 0 ? req.query : null,
+        contentLength: res.get('Content-Length') || 0,
+        service: 'eu-dayahead-api',
+        environment: process.env.NODE_ENV || 'development'
+      };
 
-    // Send to Better Stack asynchronously
-    if (logtailToken) {
-      sendToLogtail(logData).catch(err => {
-        console.error('Logtail logging failed:', err.message);
-      });
-    }
+      // Send to Better Stack asynchronously
+      if (logtailToken) {
+        sendToLogtail(logData).catch(err => {
+          console.error('Logtail logging failed:', err.message);
+        });
+      }
 
-    // Also log to console for local development
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${responseTime}ms`);
+      // Also log to console for local development
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${responseTime}ms`);
+      }
+    } catch (err) {
+      console.error('Request logging failed:', err.message);
     }
 
     // Call original end function
