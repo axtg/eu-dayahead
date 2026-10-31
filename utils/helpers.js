@@ -10,6 +10,7 @@ const ENTSOE_API_KEY = process.env.ENTSOE_API_KEY;
 const VALID_INTERVALS = new Set(['60M', '15M']);
 const NUMBER_FORMAT = /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i;
 const MAX_FIXED_MARKUP = 10; // EUR/kWh
+const PRICES_UNAVAILABLE_MESSAGE = 'Price data is temporarily unavailable. Try again shortly.';
 
 // ENTSOE day-ahead auction results publish around 14:00 CET; pad to 14:30.
 // Day X+2 prices land in the afternoon of day X, so an entry created in the
@@ -106,6 +107,12 @@ function shouldKeepPrevious(previous, data, countryCode, now) {
   const reach = lastPriceTime(data.prices) - lastPriceTime(previous.data.prices);
   const fallbackOverEntsoe = data.source !== 'entsoe' && previous.data.source === 'entsoe';
   return fallbackOverEntsoe ? reach <= 0 : reach < 0;
+}
+
+function pricesUnavailable() {
+  const err = new Error(PRICES_UNAVAILABLE_MESSAGE);
+  err.statusCode = 503;
+  return err;
 }
 
 function invalidParam(message) {
@@ -255,6 +262,7 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
     upstreamErrors.push(`stekker: ${e.message}`);
     if (partialEntsoePrices) return { source: 'entsoe', prices: partialEntsoePrices, upstreamErrors };
     e.upstreamErrors = upstreamErrors;
+    e.statusCode = 503;
     throw e;
   }
 }
@@ -487,6 +495,8 @@ function getCacheStats() {
 }
 
 module.exports = {
+  PRICES_UNAVAILABLE_MESSAGE,
+  pricesUnavailable,
   parseMarkupOptions,
   parseIntervalOption,
   validateCountry,
