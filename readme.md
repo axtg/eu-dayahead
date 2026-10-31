@@ -58,9 +58,15 @@ NODE_ENV=development
 # Optional: ENTSOE API Key for more reliable data
 ENTSOE_API_KEY=your-api-key-from-entsoe
 
-# Optional: Customize cache and rate limiting
-CACHE_TIMEOUT_MS=3600000
-RATE_LIMIT_MAX_REQUESTS=100
+# Optional: Requests per second, per IP, for /api endpoints
+RATE_LIMIT_RPS=10
+
+# Optional: Allowed CORS origin
+CORS_ORIGIN=*
+
+# Optional: Better Stack logging
+LOGTAIL_TOKEN=your-logtail-token
+LOGTAIL_ENDPOINT=your-logtail-http-endpoint
 ```
 
 **Getting an ENTSOE API Key (required for production):**
@@ -89,10 +95,10 @@ All prices are quoted in **EUR/kWh** regardless of country (this is how the unde
 | ---- | ----------- | ----------- | ----------------- |
 | `nl` | Netherlands | 21%         | Europe/Amsterdam  |
 | `de` | Germany     | 19%         | Europe/Berlin     |
-| `be` | Belgium     | 21%         | Europe/Brussels   |
+| `be` | Belgium     | 6%          | Europe/Brussels   |
 | `fr` | France      | 20%         | Europe/Paris      |
 | `at` | Austria     | 20%         | Europe/Vienna     |
-| `ch` | Switzerland | 7.7%        | Europe/Zurich     |
+| `ch` | Switzerland | 8.1%        | Europe/Zurich     |
 | `dk` | Denmark     | 25%         | Europe/Copenhagen |
 | `no` | Norway      | 25%         | Europe/Oslo       |
 | `se` | Sweden      | 25%         | Europe/Stockholm  |
@@ -131,14 +137,8 @@ curl http://localhost:3000/api/countries
 | ----------------------------- | ------------------------------- | ------------------ |
 | `GET /api/countries`          | List all supported countries    |                    |
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
-| `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next/24`  |
-
-### 🇳🇱 Netherlands shortcuts 
-
-| Endpoint            | Description          | Equivalent To      |
-| ------------------- | -------------------- | ------------------ |
-| `GET /api/today`    | Netherlands today    | `/api/nl/today`    |
-| `GET /api/next/24`  | Netherlands next 24h |                    |
+| `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
+| `GET /api/{country}/next/{hours}` | Next 1-48 hours from now    | `/api/fr/next/6`   |
 
 ### 🏢 Energy provider presets
 
@@ -210,7 +210,7 @@ Promise.all(promises).then(results => {
 │   └── helpers.js       # Helper functions
 └── routes/
     ├── countries.js     # Country-specific endpoints
-    ├── legacy.js        # Backward compatibility
+    ├── docs.js          # Swagger UI at /docs
     └── providers.js     # Energy provider presets
 ```
 
@@ -302,7 +302,7 @@ const PROVIDER_PRESETS = {
 
 ## ⚡ Performance
 
-- **Caching**: 1-hour cache for raw prices to reduce API calls
+- **Caching**: Raw prices are cached per country and refreshed after the daily publication and at local midnight, so about 2 upstream calls per country per day
 - **Rate Limiting**: Built-in delays to respect upstream API limits
 - **Concurrent Requests**: Supports multiple simultaneous country requests
 
@@ -348,7 +348,7 @@ npm run validate-api
 
 The project includes a complete GitHub Actions workflow:
 
-- **Automated Testing** - Runs on Node.js 22 and 24
+- **Automated Testing** - Runs on Node.js 22, 24 and 26
 - **Code Quality** - ESLint, security audits, and coverage reports
 - **API Validation** - Validates OpenAPI specification
 - **Docker Build** - Builds and pushes Docker images

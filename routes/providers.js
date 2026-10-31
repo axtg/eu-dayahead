@@ -6,6 +6,24 @@ const { startOfDay, endOfDay, addDays } = require('date-fns');
 
 const { fetchCountryPrices, buildCountryResponse, parseIntervalOption } = require('../utils/helpers');
 
+const PROVIDER_PRESETS = {
+  'next-energy': {
+    name: 'Next Energy',
+    countries: ['nl'],
+    markup: { fixedMarkup: 0.024, vat: 0.21 }
+  },
+  vattenfall: {
+    name: 'Vattenfall',
+    countries: ['nl', 'de', 'se'],
+    markup: { fixedMarkup: 0.03, vat: 'auto' }
+  },
+  eneco: {
+    name: 'Eneco',
+    countries: ['nl', 'be'],
+    markup: { fixedMarkup: 0.028, vat: 'auto' }
+  }
+};
+
 // Next Energy preset (Netherlands)
 router.get('/next-energy', async (req, res, next) => {
   try {
@@ -27,7 +45,8 @@ router.get('/next-energy', async (req, res, next) => {
 
     const interval = parseIntervalOption(req.query);
 
-    const result = await fetchCountryPrices('nl', { fixedMarkup: 0.024, vat: 0.21 }, { interval });
+    const { markup } = PROVIDER_PRESETS['next-energy'];
+    const result = await fetchCountryPrices('nl', markup, { interval });
 
     const windowPrices = result.prices.filter(p => {
       const t = new Date(p.time);
@@ -40,9 +59,9 @@ router.get('/next-energy', async (req, res, next) => {
       country: { code: 'NL', name: 'Netherlands', currency: 'EUR' },
       data: windowPrices,
       markup: {
-        fixed: 0.024,
-        vat: 0.21,
-        vatPercent: '21%',
+        fixed: markup.fixedMarkup,
+        vat: markup.vat,
+        vatPercent: `${markup.vat * 100}%`,
         description: 'Next Energy standard markup with Dutch VAT'
       },
       info: {
@@ -61,25 +80,6 @@ router.get('/next-energy', async (req, res, next) => {
 router.get('/:provider/:country', async (req, res, next) => {
   try {
     const { provider, country } = req.params;
-
-    // Define provider presets
-    const PROVIDER_PRESETS = {
-      'next-energy': {
-        name: 'Next Energy',
-        countries: ['nl'],
-        markup: { fixedMarkup: 0.024, vat: 0.21 }
-      },
-      vattenfall: {
-        name: 'Vattenfall',
-        countries: ['nl', 'de', 'se'],
-        markup: { fixedMarkup: 0.03, vat: 'auto' }
-      },
-      eneco: {
-        name: 'Eneco',
-        countries: ['nl', 'be'],
-        markup: { fixedMarkup: 0.028, vat: 'auto' }
-      }
-    };
 
     const providerKey = provider.toLowerCase();
     const providerConfig = Object.hasOwn(PROVIDER_PRESETS, providerKey) ? PROVIDER_PRESETS[providerKey] : null;
@@ -150,35 +150,18 @@ router.get('/:provider/:country', async (req, res, next) => {
 
 // List all available providers
 router.get('/', (req, res) => {
-  const PROVIDER_PRESETS = {
-    'next-energy': {
-      name: 'Next Energy',
-      countries: ['NL'],
-      markup: { fixed: '€0.024/kWh', vat: '21%' },
-      endpoint: '/api/providers/next-energy'
+  const providers = Object.entries(PROVIDER_PRESETS).map(([id, { name, countries, markup }]) => ({
+    id,
+    name,
+    countries: countries.map(country => country.toUpperCase()),
+    markup: {
+      fixed: `€${markup.fixedMarkup.toFixed(3)}/kWh`,
+      vat: markup.vat === 'auto' ? 'auto' : `${markup.vat * 100}%`
     },
-    vattenfall: {
-      name: 'Vattenfall',
-      countries: ['NL', 'DE', 'SE'],
-      markup: { fixed: '€0.030/kWh', vat: 'auto' },
-      endpoint: '/api/providers/vattenfall/{country}'
-    },
-    eneco: {
-      name: 'Eneco',
-      countries: ['NL', 'BE'],
-      markup: { fixed: '€0.028/kWh', vat: 'auto' },
-      endpoint: '/api/providers/eneco/{country}'
-    }
-  };
+    endpoint: id === 'next-energy' ? '/api/providers/next-energy' : `/api/providers/${id}/{country}`
+  }));
 
-  res.json({
-    status: 'success',
-    data: Object.entries(PROVIDER_PRESETS).map(([key, config]) => ({
-      id: key,
-      ...config
-    })),
-    total: Object.keys(PROVIDER_PRESETS).length
-  });
+  res.json({ status: 'success', data: providers, total: providers.length });
 });
 
 module.exports = router;

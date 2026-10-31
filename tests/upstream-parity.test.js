@@ -70,6 +70,5 @@ describeIfKey('Upstream parity (ENTSOE vs Stekker)', () => {
 
 if (!HAS_KEY) {
   // Make the skip visible in CI logs without failing the build.
-  // eslint-disable-next-line no-console
   console.warn('upstream-parity.test.js: ENTSOE_API_KEY not set — skipping live parity tests.');
 }

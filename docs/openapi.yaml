@@ -53,6 +53,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
 
+  /health/cache:
+    get:
+      tags:
+        - System
+      summary: Price cache statistics
+      description: Shows which countries are cached, their sources, and any that are stale or failing
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  cache:
+                    type: object
+                    properties:
+                      size:
+                        type: integer
+                      strategy:
+                        type: string
+                      byCountry:
+                        type: object
+                      bySource:
+                        type: object
+                      staleCountries:
+                        type: array
+                        items:
+                          type: string
+                      failedCountries:
+                        type: array
+                        items:
+                          type: string
+                      nextRefresh:
+                        type: string
+                        format: date-time
+                        nullable: true
+                  timestamp:
+                    type: string
+                    format: date-time
+
   /api/countries:
     get:
       operationId: get_api_countries
@@ -115,6 +159,44 @@ paths:
       responses:
         '200':
           description: Next 24 hours of energy prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Next24HoursResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/{country}/next/{hours}:
+    get:
+      operationId: get_api__country__next__hours
+      tags:
+        - Countries
+      summary: Get the next 1-48 hours of energy prices
+      description: Get energy prices for the given number of hours from the current hour. Fewer may be returned if later prices aren't published yet; compare `requestedHours` and `actualHours` in `info`.
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - name: hours
+          in: path
+          required: true
+          description: Number of hours
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 48
+            example: 6
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+        - $ref: '#/components/parameters/Interval'
+      responses:
+        '200':
+          description: Energy prices for the requested hours
           content:
             application/json:
               schema:

@@ -49,7 +49,7 @@ Order in `StekkerAPI.applyMarkup`: variable markup (%) → fixed markup (currenc
 
 ## Conventions
 
-- Single quotes, semicolons, 2-space indent, no trailing commas, max 120 cols (see `.eslintrc.js`).
+- Single quotes, semicolons, 2-space indent, no trailing commas, max 120 cols (see `eslint.config.js`).
 - `console.log`/`console.error` are allowed (server app); errors are forwarded to Better Stack via `logError`.
 - `middleware/securityHeaders.js` holds the enforced Content-Security-Policy. A new external script, style or connection in `public/` or `docs/index.html` must be added to its source lists. Inline scripts are hashed at startup, so they need no change; inline event handlers aren't allowed.
 - Route handlers pass errors to the handler in `index.js` with `next(error)`. Set `statusCode` on an error to choose the status. Only messages of 4xx errors reach clients.

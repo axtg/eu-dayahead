@@ -113,23 +113,19 @@ if (require.main === module) {
     const { COUNTRIES } = require('./config/countries');
 
     console.log(`🌍 European Energy Prices API running at http://localhost:${port}`);
-    console.log('\n🎯 COUNTRY-SPECIFIC ENDPOINTS (Recommended):');
+    console.log('\n🎯 ENDPOINTS:');
     console.log('  GET /api/countries - List all supported countries');
     console.log("  GET /api/{country}/today - Today's prices for country");
-    console.log("  GET /api/{country}/tomorrow - Tomorrow's prices for country");
     console.log('  GET /api/{country}/next24h - Next 24 hours for country');
-
-    console.log('\n🇳🇱 NL SHORTCUTS:');
-    console.log('  GET /api/today - Netherlands today (alias for /api/nl/today)');
-    console.log('  GET /api/next/24 - Netherlands next 24 hours');
-    console.log('  GET /api/providers/next-energy - Next Energy preset');
+    console.log('  GET /api/{country}/next/{hours} - Next 1-48 hours for country');
+    console.log('  GET /api/providers - List provider presets');
+    console.log('  GET /api/providers/{provider}/{country} - Prices with a provider preset');
     console.log('  GET /health - Health check');
 
     console.log('\n🌍 SUPPORTED COUNTRIES:');
     Object.entries(COUNTRIES).forEach(([code, config]) => {
-      console.log(
-        `  ${code.toUpperCase()} - ${config.name} (${config.currency}, VAT: ${Math.round(config.defaultVat * 100)}%)`
-      );
+      const vatPercent = Number((config.defaultVat * 100).toFixed(1));
+      console.log(`  ${code.toUpperCase()} - ${config.name} (${config.currency}, VAT: ${vatPercent}%)`);
     });
 
     console.log('\n📊 QUERY PARAMETERS:');
