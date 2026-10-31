@@ -76,7 +76,7 @@ Invalid or repeated values return 400.
 
 ## Caching
 
-- Upstream raw responses are cached for 1 hour, keyed by country + window.
+- Upstream raw responses are cached per country and day, and refreshed when new prices are published.
 - Markup and VAT are applied per request after cache lookup, so changing
   these parameters never re-hits the upstream.
 

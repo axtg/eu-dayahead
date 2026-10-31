@@ -12,6 +12,7 @@
 
 
   let chart;
+  let lastChartArgs = null;
   let countriesCache = [];
 
   function centsToEuros(cents) {
@@ -46,6 +47,37 @@
     if (apiEl) apiEl.textContent = currentFullUrl;
   }
 
+
+  // Theme: follows the OS until the visitor picks one with the toggle.
+  const THEME_KEY = 'dap_theme';
+  function isDarkTheme() {
+    return document.documentElement.classList.contains('dark');
+  }
+  function storedTheme() {
+    try {
+      return localStorage.getItem(THEME_KEY);
+    } catch {
+      return null;
+    }
+  }
+  function applyTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    if (lastChartArgs) renderChart(...lastChartArgs);
+  }
+  function bindTheme() {
+    document.getElementById('themeBtn')?.addEventListener('click', () => {
+      const dark = !isDarkTheme();
+      try {
+        localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+      } catch {
+        /* ignore quota / disabled storage */
+      }
+      applyTheme(dark);
+    });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!storedTheme()) applyTheme(e.matches);
+    });
+  }
 
   function highlightExtremes(data) {
     if (!Array.isArray(data) || data.length === 0) return { min1: -1, min2: -1, max1: -1, max2: -1 };
@@ -106,6 +138,7 @@
 
   function renderChart(labels, series, unit, resolutionMinutes = 60) {
     const ctx = document.getElementById('priceChart');
+    lastChartArgs = [labels, series, unit, resolutionMinutes];
 
     if (chart) {
       chart.destroy();
@@ -114,11 +147,14 @@
     const { min1, min2, max1, max2 } = highlightExtremes(series);
 
     // Colors
-    const COLOR_CHEAPEST = '#065f46'; // dark green
-    const COLOR_SECOND_CHEAPEST = '#10b981'; // light green (emerald)
+    const dark = isDarkTheme();
+    Chart.defaults.color = dark ? '#9ca3af' : '#666';
+    Chart.defaults.borderColor = dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const COLOR_CHEAPEST = dark ? '#34d399' : '#065f46'; // dark green, bright on a dark background
+    const COLOR_SECOND_CHEAPEST = dark ? '#a7f3d0' : '#10b981'; // light green (emerald)
     const COLOR_MID = '#eab308'; // yellow
     const COLOR_SECOND_EXPENSIVE = '#f59e0b'; // orange
-    const COLOR_MOST_EXPENSIVE = '#7f1d1d'; // dark red
+    const COLOR_MOST_EXPENSIVE = dark ? '#ef4444' : '#7f1d1d'; // dark red, bright on a dark background
 
     const pointBackground = series.map((_, i) => {
       if (i === min1) return COLOR_CHEAPEST;
@@ -138,8 +174,8 @@
           {
             label: `Price (${unit})`,
             data: series,
-            borderColor: 'rgb(17, 24, 39)',
-            backgroundColor: 'rgba(17, 24, 39, 0.08)',
+            borderColor: dark ? 'rgb(229, 231, 235)' : 'rgb(17, 24, 39)',
+            backgroundColor: dark ? 'rgba(229, 231, 235, 0.08)' : 'rgba(17, 24, 39, 0.08)',
             fill: true,
             tension: 0.35,
             pointBackgroundColor: pointBackground,
@@ -410,6 +446,8 @@
   }
 
   async function init() {
+    document.getElementById('year').textContent = new Date().getFullYear();
+    bindTheme();
     await loadCountries();
     const saved = loadState();
     if (saved) {
