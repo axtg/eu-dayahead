@@ -8,7 +8,7 @@ coverage
 .gitignore
 .github
 .claude
-.eslintrc.js
+eslint.config.js
 .prettierrc
 readme.md
 CLAUDE.md
