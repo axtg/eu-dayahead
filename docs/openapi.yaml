@@ -335,7 +335,7 @@ components:
           $ref: '#/components/schemas/ResponseInfo'
         warnings:
           type: array
-          description: Present only when the response is served from a fallback source (e.g. Stekker when ENTSOE is unavailable). Omitted otherwise.
+          description: Present only when the response is served from a fallback source (e.g. Stekker when ENTSOE is unavailable). Omitted otherwise. Includes `stale_data` when an upstream refresh failed and earlier prices are being served.
           items:
             type: string
           example: ['fallback_source: stekker']
@@ -361,7 +361,7 @@ components:
           $ref: '#/components/schemas/ExtendedResponseInfo'
         warnings:
           type: array
-          description: Present only when the response is served from a fallback source. Omitted otherwise.
+          description: Present only when the response is served from a fallback source. Omitted otherwise. Includes `stale_data` when an upstream refresh failed and earlier prices are being served.
           items:
             type: string
           example: ['fallback_source: stekker']
