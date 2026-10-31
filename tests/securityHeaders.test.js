@@ -28,16 +28,17 @@ describe('security headers', () => {
   test.each(['/', '/app.js', '/api/countries', '/health', '/nope'])('%s carries them', async url => {
     const { headers } = await request(app).get(url);
 
-    expect(headers['content-security-policy-report-only']).toContain("default-src 'self'");
+    expect(headers['content-security-policy']).toContain("default-src 'self'");
     expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(headers['strict-transport-security']).toBe('max-age=604800');
     expect(headers['x-powered-by']).toBeUndefined();
   });
 
-  test('the policy is not enforced yet', async () => {
+  test('the policy is enforced', async () => {
     const { headers } = await request(app).get('/');
 
-    expect(headers['content-security-policy']).toBeUndefined();
+    expect(headers['content-security-policy']).toBeDefined();
+    expect(headers['content-security-policy-report-only']).toBeUndefined();
   });
 
   describe('script sources', () => {
@@ -45,7 +46,7 @@ describe('security headers', () => {
 
     beforeAll(async () => {
       const { headers } = await request(app).get('/');
-      scriptSrc = directive(headers['content-security-policy-report-only'], 'script-src');
+      scriptSrc = directive(headers['content-security-policy'], 'script-src');
     });
 
     test('do not allow arbitrary inline scripts', () => {
@@ -68,7 +69,7 @@ describe('security headers', () => {
   describe('/docs', () => {
     test.each(['/docs', '/docs/', '/DOCS'])('%s has its own policy for Swagger UI', async url => {
       const { headers, text } = await request(app).get(url);
-      const policy = headers['content-security-policy-report-only'];
+      const policy = headers['content-security-policy'];
       const swagger = 'https://unpkg.com/swagger-ui-dist@5.9.0/';
 
       expect(directive(policy, 'script-src')).toContain(swagger);
@@ -82,13 +83,19 @@ describe('security headers', () => {
     test('the site policy does not allow Swagger UI', async () => {
       const { headers } = await request(app).get('/');
 
-      expect(headers['content-security-policy-report-only']).not.toContain('unpkg');
+      expect(headers['content-security-policy']).not.toContain('unpkg');
     });
 
     test('loads nothing from the Swagger demo site', async () => {
       const { text } = await request(app).get('/docs');
 
       expect(text).not.toContain('petstore.swagger.io');
+    });
+
+    test('does not send the spec URL to the Swagger validator', async () => {
+      const { text } = await request(app).get('/docs');
+
+      expect(text).toContain('validatorUrl: null');
     });
   });
 });

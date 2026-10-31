@@ -5,8 +5,8 @@ const path = require('path');
 // Scripts without a src, excluding data blocks such as JSON-LD, which browsers never run.
 const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)(?![^>]*\btype=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/g;
 
-// Report-only until checked against real traffic: violations show in the browser console and nothing is blocked.
-const POLICY_HEADER = 'Content-Security-Policy-Report-Only';
+// Blocks anything not listed. To debug a policy without breaking pages, switch to Content-Security-Policy-Report-Only.
+const POLICY_HEADER = 'Content-Security-Policy';
 
 const SITE_SOURCES = {
   scripts: [
