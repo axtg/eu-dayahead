@@ -335,7 +335,7 @@ components:
           $ref: '#/components/schemas/ResponseInfo'
         warnings:
           type: array
-          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served.
+          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
           items:
             type: string
           example: ['fallback_source: stekker']
@@ -361,7 +361,7 @@ components:
           $ref: '#/components/schemas/ExtendedResponseInfo'
         warnings:
           type: array
-          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served.
+          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
           items:
             type: string
           example: ['fallback_source: stekker']

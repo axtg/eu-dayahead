@@ -23,10 +23,12 @@ function dayStartUtc(day) {
   return new Date(new Date(`${day}T00:00:00Z`).getTime() - 60 * MINUTE);
 }
 
-function entsoeXml(days, amount = 50) {
-  const series = days.map(day => {
+// partialDays maps a day to how many of its hours to include: { '2026-11-01': 6 }
+function entsoeXml(days, amount = 50, partialDays = {}) {
+  const hoursByDay = [...days.map(day => [day, 24]), ...Object.entries(partialDays)];
+  const series = hoursByDay.map(([day, hours]) => {
     const start = dayStartUtc(day);
-    const end = new Date(start.getTime() + 1440 * MINUTE);
+    const end = new Date(start.getTime() + hours * 60 * MINUTE);
     const format = date => `${date.toISOString().slice(0, 16)}Z`;
     return `<TimeSeries><Period>
       <timeInterval><start>${format(start)}</start><end>${format(end)}</end></timeInterval>
@@ -208,23 +210,172 @@ describe('price cache', () => {
     });
   });
 
-  describe('when the data is missing today', () => {
-    beforeEach(() => {
-      setClock('2026-10-31T23:30:00Z');
-      entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+  describe('when ENTSOE returns less than a full today', () => {
+    const NEW_DAY = '2026-10-31T23:30:00Z';
+    const pointsFor = (result, day) => {
+      const start = dayStartUtc(day).getTime();
+      return result.prices.filter(p => {
+        const time = new Date(p.time).getTime();
+        return time >= start && time < start + 1440 * MINUTE;
+      }).length;
+    };
+    const entsoeReturnsFullDays = () => entsoe.mockImplementation(async () => entsoeXml(['2026-10-31', '2026-11-01']));
+
+    describe('with good prices cached', () => {
+      beforeEach(async () => {
+        setClock('2026-10-31T14:00:00Z');
+        entsoeReturnsFullDays();
+        await fetchNl();
+        setClock(NEW_DAY);
+      });
+
+      test('a response without today does not replace them', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+        const result = await fetchNl();
+
+        expect(pointsFor(result, '2026-11-01')).toBe(24);
+        expect(result.warnings).toEqual(['stale_data: upstream refresh failed']);
+      });
+
+      test('a response with part of today does not replace them', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31'], 50, { '2026-11-01': 6 }));
+
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+        const result = await fetchNl();
+
+        expect(pointsFor(result, '2026-11-01')).toBe(24);
+        expect(result.warnings).toEqual(['stale_data: upstream refresh failed']);
+      });
+
+      test('ENTSOE is retried after 15 minutes when part of today came back', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31'], 50, { '2026-11-01': 6 }));
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+        expect(entsoe).toHaveBeenCalledTimes(2);
+
+        advance(14);
+        await fetchNl();
+        expect(entsoe).toHaveBeenCalledTimes(2);
+
+        advance(1);
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+        expect(entsoe).toHaveBeenCalledTimes(3);
+      });
     });
 
-    test('retries after 15 minutes instead of waiting for 14:30 CET', async () => {
-      await fetchNl();
-      advance(14);
-      await fetchNl();
-      expect(entsoe).toHaveBeenCalledTimes(1);
+    describe('with nothing cached', () => {
+      beforeEach(() => setClock(NEW_DAY));
 
-      advance(1);
-      entsoe.mockImplementation(async () => entsoeXml(['2026-10-31', '2026-11-01']));
+      test('tries Stekker when ENTSOE has no prices for today', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+        stekker.mockImplementation(async () => stekkerHtml('2026-11-01'));
+
+        const result = await fetchNl();
+
+        expect(stekker).toHaveBeenCalledTimes(1);
+        expect(result.source).toBe('stekker');
+        expect(pointsFor(result, '2026-11-01')).toBe(24);
+      });
+
+      test('fails when no upstream has prices for today, rather than returning none', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+
+        await expect(fetchNl()).rejects.toThrow();
+      });
+
+      test('serves part of today with a warning if that is all there is', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31'], 50, { '2026-11-01': 6 }));
+
+        const result = await fetchNl();
+
+        expect(pointsFor(result, '2026-11-01')).toBe(6);
+        expect(result.warnings).toEqual(['incomplete_data: prices missing for part of today']);
+      });
+
+      test('retries part of today after 15 minutes instead of waiting for 14:30 CET', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31'], 50, { '2026-11-01': 6 }));
+        await fetchNl();
+        advance(14);
+        await fetchNl();
+        expect(entsoe).toHaveBeenCalledTimes(1);
+
+        advance(1);
+        entsoeReturnsFullDays();
+
+        expect(pointsFor(await fetchNl(), '2026-11-01')).toBe(24);
+        expect(entsoe).toHaveBeenCalledTimes(2);
+      });
+
+      test('prefers Stekker when it reaches further than part of today from ENTSOE', async () => {
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31'], 50, { '2026-11-01': 6 }));
+        stekker.mockImplementation(async () => stekkerHtml('2026-11-01'));
+
+        const result = await fetchNl();
+
+        expect(result.source).toBe('stekker');
+        expect(result.warnings).toEqual(['fallback_source: stekker']);
+      });
+    });
+  });
+
+  describe('retries across local midnight', () => {
+    const fullNextDay = async () => entsoeXml(['2026-11-01']);
+
+    test('fallback data is not kept past midnight when it lacks the new day', async () => {
+      setClock('2026-10-31T22:58:00Z');
+      entsoe.mockImplementation(async () => {
+        throw new Error('ENTSOE 503');
+      });
+      stekker.mockImplementation(async () => stekkerHtml('2026-10-31'));
+      await fetchNl();
+
+      setClock('2026-10-31T23:01:00Z');
+      entsoe.mockImplementation(fullNextDay);
 
       expect(lastTime(await fetchNl())).toBe('2026-11-01T22:00:00.000Z');
       expect(entsoe).toHaveBeenCalledTimes(2);
+    });
+
+    test('a failed refresh does not hold old prices past midnight when they lack the new day', async () => {
+      setClock('2026-10-31T14:30:00Z');
+      await fetchNl();
+      setClock('2026-10-31T22:59:30Z');
+      entsoe.mockImplementation(async () => {
+        throw new Error('ENTSOE 503');
+      });
+      await fetchNl();
+      await new Promise(resolve => setImmediate(resolve));
+      expect(entsoe).toHaveBeenCalledTimes(2);
+
+      setClock('2026-10-31T23:00:10Z');
+      entsoe.mockImplementation(fullNextDay);
+
+      expect(lastTime(await fetchNl())).toBe('2026-11-01T22:00:00.000Z');
+      expect(entsoe).toHaveBeenCalledTimes(3);
+    });
+
+    test('kept ENTSOE prices are not held past midnight when they lack the new day', async () => {
+      setClock('2026-10-31T14:30:00Z');
+      await fetchNl();
+      setClock('2026-10-31T22:58:00Z');
+      entsoe.mockImplementation(async () => {
+        throw new Error('ENTSOE 503');
+      });
+      stekker.mockImplementation(async () => stekkerHtml('2026-10-31', 70, 3));
+      await fetchNl();
+      await new Promise(resolve => setImmediate(resolve));
+      expect(entsoe).toHaveBeenCalledTimes(2);
+
+      setClock('2026-10-31T23:01:00Z');
+      entsoe.mockImplementation(fullNextDay);
+
+      expect(lastTime(await fetchNl())).toBe('2026-11-01T22:00:00.000Z');
+      expect(entsoe).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -280,7 +431,7 @@ describe('price cache', () => {
 
       setClock('2026-10-31T13:31:00Z');
       entsoeFails();
-      stekker.mockImplementation(async () => stekkerHtml('2026-11-01'));
+      stekker.mockImplementation(async () => stekkerHtml('2026-10-31', 70, 48));
       const result = await fetchNl();
 
       expect(result.source).toBe('stekker');
@@ -291,7 +442,7 @@ describe('price cache', () => {
       await fetchNl();
       setClock('2026-11-01T23:30:00Z');
       entsoeFails();
-      stekker.mockImplementation(async () => stekkerHtml('2026-11-01'));
+      stekker.mockImplementation(async () => stekkerHtml('2026-11-02'));
 
       expect((await fetchNl()).source).toBe('stekker');
     });
