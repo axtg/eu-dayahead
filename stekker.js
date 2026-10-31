@@ -162,7 +162,7 @@ class StekkerAPI {
       .map((time, idx) => ({
         time: new Date(time).toISOString(),
         priceMwh: prices[idx], // EUR/MWh (raw market price)
-        price: prices[idx] ? prices[idx] / 1000 : null // EUR/kWh (consumer-friendly)
+        price: prices[idx] != null ? prices[idx] / 1000 : null // EUR/kWh (consumer-friendly)
       }))
       .filter(hour => hour.price !== null)
       .sort((a, b) => new Date(a.time) - new Date(b.time));
