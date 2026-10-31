@@ -1,11 +1,31 @@
+const crypto = require('crypto');
+
 const logtailToken = process.env.LOGTAIL_TOKEN;
 const logtailEndpoint = process.env.LOGTAIL_ENDPOINT || 'https://s1319479.eu-nbg-2.betterstackdata.com';
 
 if (!logtailToken) {
   console.warn('⚠️  LOGTAIL_TOKEN not found in environment variables');
 } else {
-  console.log('✅ Logtail token loaded:', logtailToken.substring(0, 8) + '...');
+  console.log('✅ Logtail token loaded');
 }
+
+// Salt is kept in memory only and replaced each UTC day, so client IDs can't be linked across days
+// or reversed once the salt is gone. A restart also replaces it, splitting that day's unique counts.
+let clientIdSalt = null;
+let clientIdSaltDate = null;
+
+// Per-day client ID, used instead of logging the IP
+const getClientId = ip => {
+  if (!ip) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (clientIdSaltDate !== today) {
+    clientIdSalt = crypto.randomBytes(32);
+    clientIdSaltDate = today;
+  }
+
+  return crypto.createHmac('sha256', clientIdSalt).update(ip).digest('hex').slice(0, 16);
+};
 
 // Send log via HTTP endpoint
 const sendToLogtail = async logData => {
@@ -54,7 +74,7 @@ const loggingMiddleware = (req, res, next) => {
         statusCode: res.statusCode,
         responseTime: responseTime,
         userAgent: req.get('User-Agent') || 'Unknown',
-        ip: req.ip || req.connection.remoteAddress || req.socket.remoteAddress,
+        clientId: getClientId(req.ip || req.socket?.remoteAddress),
         referrer: req.get('Referrer'),
         country: req.params?.country || null,
         endpoint: req.route?.path || req.path,
@@ -96,7 +116,7 @@ const logError = (error, req = null) => {
     stack: error.stack,
     url: req?.originalUrl || 'Unknown',
     method: req?.method || 'Unknown',
-    ip: req?.ip || req?.connection?.remoteAddress || 'Unknown',
+    clientId: getClientId(req?.ip || req?.socket?.remoteAddress),
     service: 'eu-dayahead-api',
     environment: process.env.NODE_ENV || 'development'
   };
@@ -115,5 +135,6 @@ const logError = (error, req = null) => {
 module.exports = {
   loggingMiddleware,
   logError,
-  sendToLogtail
+  sendToLogtail,
+  getClientId
 };

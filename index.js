@@ -9,6 +9,9 @@ require('dotenv').config();
 // Import logging middleware
 const { loggingMiddleware, logError } = require('./middleware/logging');
 
+// Import rate limiter
+const { createRateLimiter, parseRateLimit } = require('./middleware/rateLimit');
+
 // Import route handlers
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
@@ -16,6 +19,11 @@ const docsRoutes = require('./routes/docs');
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// nginx runs on the same host, so honour X-Forwarded-For only on loopback connections. req.ip is then
+// the entry nginx appended; anyone reaching the port directly is identified by their socket address.
+// Change this if nginx moves to another host or another proxy is added.
+app.set('trust proxy', 'loopback');
 
 // Middleware
 app.use(
@@ -31,34 +39,9 @@ app.use(loggingMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Simple per-IP rate limiter for API routes (X requests/second)
-const RATE_LIMIT_RPS = parseInt(process.env.RATE_LIMIT_RPS || process.env.API_RATE_LIMIT_PER_SEC || '10', 10);
-const __rateBuckets = new Map();
-function rateLimiter(req, res, next) {
-  const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.ip || req.connection?.remoteAddress || 'unknown').toString();
-  const now = Date.now();
-  const windowMs = 1000;
-  let bucket = __rateBuckets.get(ip);
-  if (!bucket || now - bucket.windowStart >= windowMs) {
-    bucket = { count: 0, windowStart: now };
-    __rateBuckets.set(ip, bucket);
-  }
-  bucket.count += 1;
-
-  const remaining = Math.max(RATE_LIMIT_RPS - bucket.count, 0);
-  const resetUnixSeconds = Math.ceil((bucket.windowStart + windowMs) / 1000);
-
-  res.set({
-    'X-RateLimit-Limit': String(RATE_LIMIT_RPS),
-    'X-RateLimit-Remaining': String(remaining),
-    'X-RateLimit-Reset': String(resetUnixSeconds)
-  });
-
-  if (bucket.count > RATE_LIMIT_RPS) {
-    res.set('Retry-After', '1');
-    return res.status(429).json({ status: 'error', message: 'Rate limit exceeded. Try again later.', limitPerSecond: RATE_LIMIT_RPS });
-  }
-  return next();
-}
+const rateLimiter = createRateLimiter({
+  limit: parseRateLimit(process.env.RATE_LIMIT_RPS || process.env.API_RATE_LIMIT_PER_SEC)
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -84,7 +67,7 @@ app.get('/openapi.yaml', (req, res) => {
 
 // Mount API route handlers - ORDER MATTERS!
 app.use('/api', rateLimiter, countryRoutes);
-app.use('/api/providers', rateLimiter, providerRoutes);
+app.use('/api/providers', providerRoutes);
 app.use('/docs', docsRoutes);
 
 // Fallback to index.html for root
