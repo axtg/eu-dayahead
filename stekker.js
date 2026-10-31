@@ -81,7 +81,7 @@ class StekkerAPI {
           fixed: fixedMarkup,
           variable: variableMarkup,
           vat: vatRate,
-          vatPercent: `${Math.round(vatRate * 100)}%`,
+          vatPercent: `${Number((vatRate * 100).toFixed(1))}%`,
           originalPrice: hour.price
         }
       };

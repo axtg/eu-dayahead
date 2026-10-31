@@ -54,12 +54,15 @@ License: MIT (code) · Data attribution: ENTSOE Transparency Platform, stekker.a
 
 ## Query parameters
 
-- markup (decimal, EUR/kWh) — fixed per-kWh markup; alias: fixedMarkup
-- variableMarkup (decimal) — proportional markup, e.g. 0.05 = +5%
-- vat (decimal) — VAT factor, e.g. 0.21 for 21%; or "auto" to use country default
+- markup (decimal, EUR/kWh, -10 to 10) — fixed per-kWh markup; alias: fixedMarkup
+- variableMarkup (percent, -100 to 1000) — proportional markup, e.g. 5 = +5%
+- vat (decimal, 0 to 1) — VAT factor, e.g. 0.21 for 21%; or "auto" to use country default.
+  An explicit value wins over autoVat and includeVat
 - autoVat (boolean) — true to apply the country's default VAT
-- includeVat (boolean) — return VAT-inclusive prices
-- roundTo (integer, default 5) — number of decimal places in returned prices
+- includeVat (boolean) — same as autoVat
+- roundTo (integer, 0 to 10, default 5) — number of decimal places in returned prices
+
+Invalid or repeated values return 400.
 - interval (enum) — granularity of the returned series:
     - `60M` (default) — hourly mean of the underlying quarter-hour values
     - `15M` — pass-through quarter-hour values (~4× more entries per window)

@@ -8,6 +8,8 @@ const { sendToLogtail } = require('../middleware/logging');
 
 const ENTSOE_API_KEY = process.env.ENTSOE_API_KEY;
 const VALID_INTERVALS = new Set(['60M', '15M']);
+const NUMBER_FORMAT = /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i;
+const MAX_FIXED_MARKUP = 10; // EUR/kWh
 
 // ENTSOE day-ahead auction results publish around 14:00 CET; pad to 14:30.
 // Day X+2 prices land in the afternoon of day X, so an entry created in the
@@ -106,14 +108,64 @@ function shouldKeepPrevious(previous, data, countryCode, now) {
   return fallbackOverEntsoe ? reach <= 0 : reach < 0;
 }
 
+function invalidParam(message) {
+  const err = new Error(message);
+  err.statusCode = 400;
+  return err;
+}
+
+// Repeated parameters arrive as arrays and fail the type check. Limits keep prices finite and
+// catch unit mix-ups, such as vat=21 or a markup in cents.
+function parseNumberParam(query, name, min, max, hint = '') {
+  const raw = query[name];
+  if (raw === undefined || raw === '') return undefined;
+  const value = typeof raw === 'string' && NUMBER_FORMAT.test(raw) ? Number(raw) : NaN;
+  if (!(value >= min && value <= max)) {
+    throw invalidParam(`Invalid ${name}. Use a number from ${min} to ${max}${hint}.`);
+  }
+  return value;
+}
+
+function parseBooleanParam(query, name) {
+  const raw = query[name];
+  if (raw === undefined || raw === '') return false;
+  const normalised = typeof raw === 'string' ? raw.toLowerCase() : '';
+  if (normalised !== 'true' && normalised !== 'false') {
+    throw invalidParam(`Invalid ${name}. Use true or false.`);
+  }
+  return normalised === 'true';
+}
+
+// An explicit vat wins, including 0. autoVat and includeVat both mean the country's rate.
+function parseVat(query, countryConfig) {
+  const autoVat = parseBooleanParam(query, 'autoVat');
+  const includeVat = parseBooleanParam(query, 'includeVat');
+  if (query.vat === 'auto') return countryConfig.defaultVat;
+  const vat = parseNumberParam(query, 'vat', 0, 1, ' (0.21 means 21%), or auto');
+  if (vat !== undefined) return vat;
+  return autoVat || includeVat ? countryConfig.defaultVat : 0;
+}
+
+function parseRoundTo(query) {
+  const roundTo = parseNumberParam(query, 'roundTo', 0, 10);
+  if (roundTo !== undefined && !Number.isInteger(roundTo)) {
+    throw invalidParam('Invalid roundTo. Use a whole number from 0 to 10.');
+  }
+  return roundTo ?? 5;
+}
+
 function parseMarkupOptions(query, country) {
   const countryConfig = COUNTRIES[country] || COUNTRIES.nl;
+  const vat = parseVat(query, countryConfig);
   return {
-    fixedMarkup: parseFloat(query.markup) || parseFloat(query.fixedMarkup) || 0,
-    variableMarkup: parseFloat(query.variableMarkup) || 0,
-    vat: parseFloat(query.vat) || (query.autoVat === 'true' ? countryConfig.defaultVat : 0),
-    includeVat: parseFloat(query.vat) > 0 || query.includeVat === 'true' || query.autoVat === 'true',
-    roundTo: parseInt(query.roundTo) || 5
+    fixedMarkup:
+      parseNumberParam(query, 'markup', -MAX_FIXED_MARKUP, MAX_FIXED_MARKUP, ' (EUR/kWh)') ??
+      parseNumberParam(query, 'fixedMarkup', -MAX_FIXED_MARKUP, MAX_FIXED_MARKUP, ' (EUR/kWh)') ??
+      0,
+    variableMarkup: parseNumberParam(query, 'variableMarkup', -100, 1000, ' (percent)') ?? 0,
+    vat,
+    includeVat: vat > 0,
+    roundTo: parseRoundTo(query)
   };
 }
 
@@ -122,9 +174,7 @@ function parseIntervalOption(query) {
   if (raw === undefined || raw === null || raw === '') return '60M';
   const normalised = String(raw).toUpperCase();
   if (!VALID_INTERVALS.has(normalised)) {
-    const err = new Error(`Invalid interval '${raw}'. Valid values: 60M, 15M.`);
-    err.statusCode = 400;
-    throw err;
+    throw invalidParam(`Invalid interval '${raw}'. Valid values: 60M, 15M.`);
   }
   return normalised;
 }
