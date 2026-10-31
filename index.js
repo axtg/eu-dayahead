@@ -11,6 +11,7 @@ const { loggingMiddleware, logError } = require('./middleware/logging');
 
 // Import rate limiter
 const { createRateLimiter, parseRateLimit } = require('./middleware/rateLimit');
+const { securityHeaders } = require('./middleware/securityHeaders');
 
 // Import route handlers
 const { PRICES_UNAVAILABLE_MESSAGE } = require('./utils/helpers');
@@ -26,10 +27,14 @@ const port = process.env.PORT || 3000;
 // Change this if nginx moves to another host or another proxy is added.
 app.set('trust proxy', 'loopback');
 
+app.disable('x-powered-by');
+
 // Middleware
+app.use(securityHeaders());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || '*'
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'HEAD']
   })
 );
 
