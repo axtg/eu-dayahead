@@ -13,6 +13,7 @@
 
   let chart;
   let lastChartArgs = null;
+  let latestRequestId = 0;
   let countriesCache = [];
 
   function centsToEuros(cents) {
@@ -119,12 +120,12 @@
     // Update with compact format: [icon] €0.131 at 14h
     document.getElementById('lowestPriceLabel').innerHTML =
       `<svg class="w-3 h-3 inline mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 4.414 6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 15.586l3.293-3.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
       </svg>€${minPrice.toFixed(3)} at ${lowestTime}`;
 
     document.getElementById('highestPriceLabel').innerHTML =
       `<svg class="w-3 h-3 inline mr-1 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 15.586l3.293-3.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 4.414 6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
       </svg>€${maxPrice.toFixed(3)} at ${highestTime}`;
 
     document.getElementById('averagePriceLabel').innerHTML =
@@ -136,9 +137,48 @@
     priceStatsEl.classList.remove('hidden');
   }
 
-  function renderChart(labels, series, unit, resolutionMinutes = 60) {
+  // Fractional x-axis position of the current time, or null when it's outside the data.
+  function nowPosition(times, resolutionMinutes) {
+    const now = Date.now();
+    const starts = times.map(t => new Date(t).getTime());
+    const last = starts.length - 1;
+    if (last < 0 || now < starts[0] || now >= starts[last] + resolutionMinutes * 60000) return null;
+    for (let i = last; i >= 0; i--) {
+      if (now >= starts[i]) return i === last ? last : i + (now - starts[i]) / (starts[i + 1] - starts[i]);
+    }
+    return null;
+  }
+
+  function nowMarkerPlugin(times, resolutionMinutes, color) {
+    return {
+      id: 'nowMarker',
+      afterDatasetsDraw(chartInstance) {
+        const position = nowPosition(times, resolutionMinutes);
+        if (position === null) return;
+        const { ctx: canvas, chartArea, scales } = chartInstance;
+        const x = scales.x.getPixelForValue(position);
+        const labelOnLeft = x > chartArea.right - 40;
+        canvas.save();
+        canvas.strokeStyle = color;
+        canvas.fillStyle = color;
+        canvas.lineWidth = 1.5;
+        canvas.setLineDash([4, 4]);
+        canvas.beginPath();
+        canvas.moveTo(x, chartArea.top);
+        canvas.lineTo(x, chartArea.bottom);
+        canvas.stroke();
+        canvas.font = `600 11px ${Chart.defaults.font.family}`;
+        canvas.textAlign = labelOnLeft ? 'right' : 'left';
+        canvas.textBaseline = 'top';
+        canvas.fillText('Now', x + (labelOnLeft ? -5 : 5), chartArea.top + 3);
+        canvas.restore();
+      }
+    };
+  }
+
+  function renderChart(labels, series, unit, resolutionMinutes = 60, nowMarkerTimes = null) {
     const ctx = document.getElementById('priceChart');
-    lastChartArgs = [labels, series, unit, resolutionMinutes];
+    lastChartArgs = [labels, series, unit, resolutionMinutes, nowMarkerTimes];
 
     if (chart) {
       chart.destroy();
@@ -168,6 +208,7 @@
 
     chart = new Chart(ctx, {
       type: 'line',
+      plugins: nowMarkerTimes ? [nowMarkerPlugin(nowMarkerTimes, resolutionMinutes, dark ? '#60a5fa' : '#2563eb')] : [],
       data: {
         labels,
         datasets: [
@@ -222,7 +263,11 @@
 
   async function fetchJSON(url) {
     const res = await fetch(url, { headers: { 'accept': 'application/json' } });
-    if (!res.ok) throw new Error(`Request failed (${res.status})`);
+    if (!res.ok) {
+      const err = new Error(`Request failed (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   }
 
@@ -245,9 +290,42 @@
     }
   }
 
+  const NOTICE_BASE = 'mb-3 shrink-0 rounded border px-3 py-2 text-xs';
+  const NOTICE_STYLES = {
+    error: `${NOTICE_BASE} bg-red-50 border-red-200 text-red-900`,
+    warning: `${NOTICE_BASE} bg-yellow-50 border-yellow-200 text-yellow-800`
+  };
+  const WARNING_MESSAGES = {
+    fallback_source: 'These prices come from our fallback source (Stekker), so they may be less accurate.',
+    stale_data: 'We couldn\'t refresh prices just now, so these may be out of date.',
+    incomplete_data: 'Prices are missing for part of today.'
+  };
+
+  function setNotice(kind, message) {
+    els.status.className = message ? NOTICE_STYLES[kind] : '';
+    els.status.textContent = message || '';
+  }
+
+  function warningMessages(warnings) {
+    return (warnings || []).map(w => WARNING_MESSAGES[w.split(':')[0]] || w).join(' ');
+  }
+
+  // A chart for the previous selection would look like the answer to the current one.
+  function clearChart() {
+    if (chart) chart.destroy();
+    chart = null;
+    lastChartArgs = null;
+    document.getElementById('priceStats').classList.add('hidden');
+  }
+
+  function loadErrorMessage(err) {
+    if (err.status === 400) return 'Prices can\'t be calculated with these values. Check your VAT and markup.';
+    return 'We couldn\'t load prices. Please try again in a moment.';
+  }
+
   async function refresh() {
+    const requestId = ++latestRequestId;
     try {
-      els.status.textContent = '';
       const country = els.country.value || 'nl';
       const timeframe = els.timeframe.value || 'next24h';
       const markupCents = els.markupCents.value || '0';
@@ -258,17 +336,28 @@
       setApiUrlDisplay(endpoint);
 
       const payload = await fetchJSON(endpoint);
+      if (requestId !== latestRequestId) return;
       const unit = payload?.info?.priceUnit || 'EUR/kWh';
       const resolutionMinutes = payload?.info?.resolutionMinutes || 60;
 
       const labels = (payload?.data || []).map(p => p.hour ?? new Date(p.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       const series = (payload?.data || []).map(p => Number(p.price));
 
+      if (series.length === 0) {
+        clearChart();
+        setNotice('warning', 'No prices are available for this selection yet.');
+        return;
+      }
+
+      const nowMarkerTimes = payload?.info?.type === 'today' ? payload.data.map(p => p.time) : null;
+      setNotice('warning', warningMessages(payload?.warnings));
       updatePriceStats(labels, series, unit);
-      renderChart(labels, series, unit, resolutionMinutes);
+      renderChart(labels, series, unit, resolutionMinutes, nowMarkerTimes);
     } catch (err) {
       console.error(err);
-      els.status.textContent = 'Failed to load data';
+      if (requestId !== latestRequestId) return;
+      clearChart();
+      setNotice('error', loadErrorMessage(err));
     }
   }
 
@@ -305,6 +394,16 @@
     });
     els.markupCents.addEventListener('input', () => { saveState(); refresh(); });
     els.vatPercent.addEventListener('input', () => { saveState(); refresh(); });
+
+    // Clear buttons. Zero rather than empty, because an empty saved VAT falls back to the country default on reload.
+    [['clearVat', els.vatPercent], ['clearMarkup', els.markupCents]].forEach(([id, input]) => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        input.value = '0';
+        input.focus();
+        saveState();
+        refresh();
+      });
+    });
 
     // About modal
     const aboutBtn = document.getElementById('aboutBtn');
@@ -448,7 +547,16 @@
   async function init() {
     document.getElementById('year').textContent = new Date().getFullYear();
     bindTheme();
-    await loadCountries();
+    bindEvents();
+    // Keep the "Now" marker moving while the page stays open.
+    setInterval(() => { if (chart) chart.draw(); }, 60000);
+    try {
+      await loadCountries();
+    } catch (err) {
+      console.error(err);
+      setNotice('error', loadErrorMessage(err));
+      return;
+    }
     const saved = loadState();
     if (saved) {
       if (saved.country) {
@@ -469,7 +577,6 @@
       setIntervalActive('60M');
       updateVatForCountry('nl');
     }
-    bindEvents();
     await refresh();
   }
 
