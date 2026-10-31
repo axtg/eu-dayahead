@@ -30,6 +30,16 @@ describe('Rate limiter', () => {
     });
   });
 
+  test.each([
+    ['127.0.0.1', true],
+    ['::1', true],
+    ['::ffff:127.0.0.1', true],
+    ['203.0.113.50', false],
+    ['::ffff:203.0.113.50', false]
+  ])('a connection from %s is trusted to set X-Forwarded-For: %s', (address, trusted) => {
+    expect(app.get('trust proxy fn')(address, 0)).toBe(trusted);
+  });
+
   test('a provider request counts once against the allowance', async () => {
     const response = await request(app).get('/api/providers').set('X-Forwarded-For', '203.0.113.30');
 

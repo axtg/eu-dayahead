@@ -20,9 +20,10 @@ const docsRoutes = require('./routes/docs');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// One proxy (nginx) sits in front of the app, so req.ip is the rightmost X-Forwarded-For entry.
-// Entries further left are client-controlled. Change this if another proxy is added.
-app.set('trust proxy', 1);
+// nginx runs on the same host, so honour X-Forwarded-For only on loopback connections. req.ip is then
+// the entry nginx appended; anyone reaching the port directly is identified by their socket address.
+// Change this if nginx moves to another host or another proxy is added.
+app.set('trust proxy', 'loopback');
 
 // Middleware
 app.use(
