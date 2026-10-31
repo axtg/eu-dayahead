@@ -1,3 +1,4 @@
+const { EntsoeAPI } = require('../entsoe');
 const { StekkerAPI } = require('../stekker');
 
 function stekkerHtml(x, y) {
@@ -19,6 +20,40 @@ describe('StekkerAPI.parseResponse', () => {
     const prices = new StekkerAPI().parseResponse(stekkerHtml(times, [10, null, -3]), null, null, true);
 
     expect(prices.map(p => p.priceMwh)).toEqual([10, -3]);
+  });
+});
+
+describe('upstream error responses', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('Stekker errors leave out the response body, which API clients would otherwise see', async () => {
+    global.fetch = jest.fn(async () => new Response('<html>internal host 10.0.0.5</html>', { status: 502 }));
+
+    const error = await new StekkerAPI().makeRequest('/epex-forecast').catch(e => e);
+
+    expect(error.message).toBe('HTTP 502');
+  });
+
+  test('ENTSOE errors include the reason from the response', async () => {
+    const body =
+      '<Acknowledgement_MarketDocument><Reason><text>Token invalid</text></Reason></Acknowledgement_MarketDocument>';
+    global.fetch = jest.fn(async () => new Response(body, { status: 401 }));
+
+    await expect(new EntsoeAPI('key').makeRequest('/api')).rejects.toThrow('ENTSOE 401: Token invalid');
+  });
+
+  test('the ENTSOE key is URL-encoded', async () => {
+    const path = jest.fn(async () => '<Publication_MarketDocument></Publication_MarketDocument>');
+    const api = new EntsoeAPI('a&b=c');
+    api.makeRequest = path;
+
+    await api.getCountryPrices('nl', new Date('2026-10-30T00:00Z'), new Date('2026-10-31T00:00Z'));
+
+    expect(path.mock.calls[0][0]).toContain('securityToken=a%26b%3Dc&');
   });
 });
 

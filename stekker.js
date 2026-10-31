@@ -1,13 +1,13 @@
 // Stekker.app API for Dutch Energy Prices
 // Based on the stekker.js implementation from powerhour
 
-const https = require('https');
+const { fetchText } = require('./utils/httpClient');
 
 class StekkerAPI {
   constructor(options = {}) {
     this.host = 'stekker.app';
     this.port = 443;
-    this.timeout = options.timeout || 30000;
+    this.timeout = options.timeout || 6000;
     this.region = options.region || 'NL';
   }
 
@@ -89,31 +89,10 @@ class StekkerAPI {
   }
 
   async makeRequest(path) {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: this.host,
-        port: this.port,
-        path: path,
-        method: 'GET',
-        timeout: this.timeout
-      };
-
-      const req = https.request(options, res => {
-        let body = '';
-        res.on('data', chunk => (body += chunk));
-        res.on('end', () => {
-          if (res.statusCode !== 200) {
-            reject(new Error(`HTTP ${res.statusCode}: ${body}`));
-            return;
-          }
-          resolve(body);
-        });
-      });
-
-      req.on('error', reject);
-      req.on('timeout', () => reject(new Error('Request timeout')));
-      req.end();
-    });
+    const { status, body } = await fetchText(`https://${this.host}:${this.port}${path}`, { timeoutMs: this.timeout });
+    // The body stays out of the message, because route handlers return error messages to API clients.
+    if (status !== 200) throw new Error(`HTTP ${status}`);
+    return body;
   }
 
   parseResponse(htmlResponse, start, end, includeForecast) {

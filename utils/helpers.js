@@ -4,6 +4,7 @@ const { startOfDay } = require('date-fns');
 const { COUNTRIES } = require('../config/countries');
 const { StekkerAPI } = require('../stekker');
 const { EntsoeAPI } = require('../entsoe');
+const { sendToLogtail } = require('../middleware/logging');
 
 const ENTSOE_API_KEY = process.env.ENTSOE_API_KEY;
 const VALID_INTERVALS = new Set(['60M', '15M']);
@@ -15,19 +16,29 @@ const ENTSOE_PUBLISH_HOUR_CET = 14;
 const ENTSOE_PUBLISH_MINUTE_CET = 30;
 const ENTSOE_PUBLISH_TZ = 'Europe/Brussels';
 
-// key -> { refreshAfter, data: { source, prices, upstreamErrors? } }
-const __rawCache = new Map();
+const FALLBACK_RETRY_MS = 5 * 60_000; // Fallback data is replaced by ENTSOE data as soon as it recovers
+const LATE_PUBLISH_RETRY_MS = 15 * 60_000; // Next-day prices can arrive after the publish boundary
+const FAILURE_RETRY_MS = 60_000; // Don't call failing upstreams on every request
 
-function localDateInTz(date, timezone) {
-  const z = toZonedTime(date, timezone);
-  const yyyy = z.getFullYear();
-  const mm = String(z.getMonth() + 1).padStart(2, '0');
-  const dd = String(z.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+// countryCode -> { refreshAfter, refreshFailed, data: { source, prices, upstreamErrors? } }
+const __rawCache = new Map();
+// countryCode -> promise of the running upstream fetch, shared by concurrent requests
+const __inFlight = new Map();
+// countryCode -> { error, retryAfter }, for countries with nothing cached yet
+const __fetchFailures = new Map();
+
+function localDayStart(countryCode, now, dayOffset) {
+  const tz = COUNTRIES[countryCode].timezone;
+  const dayStartInTz = startOfDay(toZonedTime(now, tz));
+  dayStartInTz.setDate(dayStartInTz.getDate() + dayOffset);
+  return fromZonedTime(dayStartInTz, tz).getTime();
 }
 
-function dailyCacheKey(countryCode, now) {
-  return `${countryCode}|${localDateInTz(now, COUNTRIES[countryCode].timezone)}`;
+// True if prices run through to the last hour of the given local day
+function coversLocalDay(prices, countryCode, now, dayOffset) {
+  if (prices.length === 0) return false;
+  const lastHourStart = localDayStart(countryCode, now, dayOffset + 1) - 3_600_000;
+  return new Date(prices[prices.length - 1].time).getTime() >= lastHourStart;
 }
 
 // Single canonical upstream window per country per day, wide enough to cover
@@ -43,11 +54,11 @@ function canonicalFetchWindow(countryCode, now) {
   return { start: fromZonedTime(startInTz, tz), end: fromZonedTime(endInTz, tz) };
 }
 
-// Before today's 14:30 CET: refresh at 14:30 CET (so we pick up the next
-// auction). After 14:30 CET: cache is good until midnight in the country's
-// timezone, when the daily key rolls over and a fresh fetch happens.
-function computeRefreshAfter(countryCode, now) {
-  const country = COUNTRIES[countryCode];
+// Fallback data: retry ENTSOE soon. Before today's 14:30 CET: refresh at 14:30 CET
+// (so we pick up the next auction). After 14:30 CET: good until midnight in the
+// country's timezone, unless the next day hasn't been published yet.
+function computeRefreshAfter(countryCode, now, data) {
+  if (ENTSOE_API_KEY && data.source !== 'entsoe') return now.getTime() + FALLBACK_RETRY_MS;
 
   const cetNow = toZonedTime(now, ENTSOE_PUBLISH_TZ);
   const cetPublishToday = new Date(cetNow);
@@ -55,9 +66,9 @@ function computeRefreshAfter(countryCode, now) {
   const publishUtc = fromZonedTime(cetPublishToday, ENTSOE_PUBLISH_TZ).getTime();
   if (now.getTime() < publishUtc) return publishUtc;
 
-  const tomorrowStartInTz = startOfDay(toZonedTime(now, country.timezone));
-  tomorrowStartInTz.setDate(tomorrowStartInTz.getDate() + 1);
-  return fromZonedTime(tomorrowStartInTz, country.timezone).getTime();
+  const midnight = localDayStart(countryCode, now, 1);
+  if (coversLocalDay(data.prices, countryCode, now, 1)) return midnight;
+  return Math.min(now.getTime() + LATE_PUBLISH_RETRY_MS, midnight);
 }
 
 function parseMarkupOptions(query, country) {
@@ -133,29 +144,97 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
 
   // Stekker fallback. Region is swapped per request via constructor in stekker.js (see below);
   // here we just instantiate with the country's region.
-  const stekker = new StekkerAPI({ region: country.stekkerRegion });
-  const prices = await stekker.getDutchPrices(dateStart, dateEnd, includeForecast, {
-    fixedMarkup: 0,
-    variableMarkup: 0,
-    vat: 0,
-    includeVat: false,
-    roundTo: 5
+  try {
+    const stekker = new StekkerAPI({ region: country.stekkerRegion });
+    const prices = await stekker.getDutchPrices(dateStart, dateEnd, includeForecast, {
+      fixedMarkup: 0,
+      variableMarkup: 0,
+      vat: 0,
+      includeVat: false,
+      roundTo: 5
+    });
+    if (prices.length === 0) throw new Error('Stekker API Error: no prices in the requested window');
+    return { source: 'stekker', prices, upstreamErrors: upstreamErrors.length ? upstreamErrors : undefined };
+  } catch (e) {
+    upstreamErrors.push(`stekker: ${e.message}`);
+    e.upstreamErrors = upstreamErrors;
+    throw e;
+  }
+}
+
+function logUpstreamFetch(countryCode, source, upstreamErrors, durationMs) {
+  if (upstreamErrors) console.error(`Upstream errors for ${countryCode}:`, upstreamErrors.join('; '));
+
+  sendToLogtail({
+    dt: new Date().toISOString(),
+    level: upstreamErrors ? 'error' : 'info',
+    message: `Upstream fetch: ${countryCode} from ${source || 'none'}`,
+    country: countryCode,
+    source,
+    upstreamErrors,
+    durationMs,
+    service: 'eu-dayahead-api',
+    environment: process.env.NODE_ENV || 'development'
   });
-  return { source: 'stekker', prices, upstreamErrors: upstreamErrors.length ? upstreamErrors : undefined };
+}
+
+function runUpstreamFetch(countryCode) {
+  const now = new Date();
+  const { start, end } = canonicalFetchWindow(countryCode, now);
+
+  return fetchRawPrices(countryCode, start, end, false)
+    .then(data => {
+      logUpstreamFetch(countryCode, data.source, data.upstreamErrors, Date.now() - now.getTime());
+      __fetchFailures.delete(countryCode);
+      const entry = { data, refreshFailed: false, refreshAfter: computeRefreshAfter(countryCode, now, data) };
+      __rawCache.set(countryCode, entry);
+      return entry;
+    })
+    .catch(error => {
+      logUpstreamFetch(countryCode, null, error.upstreamErrors, Date.now() - now.getTime());
+      const retryAfter = Date.now() + FAILURE_RETRY_MS;
+
+      const previous = __rawCache.get(countryCode);
+      if (previous) {
+        previous.refreshFailed = true;
+        previous.refreshAfter = retryAfter;
+        return previous;
+      }
+
+      __fetchFailures.set(countryCode, { error, retryAfter });
+      throw error;
+    })
+    .finally(() => __inFlight.delete(countryCode));
+}
+
+function refreshCountry(countryCode) {
+  if (!__inFlight.has(countryCode)) __inFlight.set(countryCode, runUpstreamFetch(countryCode));
+  return __inFlight.get(countryCode);
+}
+
+async function getCacheEntry(countryCode) {
+  const entry = __rawCache.get(countryCode);
+  if (entry && entry.refreshAfter > Date.now()) return entry;
+
+  if (entry) {
+    // Still has today's prices, so refresh in the background rather than making this visitor wait.
+    if (coversLocalDay(entry.data.prices, countryCode, new Date(), 0)) {
+      refreshCountry(countryCode);
+      return entry;
+    }
+    return refreshCountry(countryCode);
+  }
+
+  const failure = __fetchFailures.get(countryCode);
+  if (failure && failure.retryAfter > Date.now()) throw failure.error;
+
+  return refreshCountry(countryCode);
 }
 
 async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = {}) {
   const interval = intervalOptions.interval || '60M';
-  const now = new Date();
-  const key = dailyCacheKey(countryCode, now);
 
-  let entry = __rawCache.get(key);
-  if (!entry || entry.refreshAfter <= Date.now()) {
-    const { start, end } = canonicalFetchWindow(countryCode, now);
-    const data = await fetchRawPrices(countryCode, start, end, false);
-    entry = { data, refreshAfter: computeRefreshAfter(countryCode, now) };
-    __rawCache.set(key, entry);
-  }
+  const entry = await getCacheEntry(countryCode);
   const cached = entry.data;
 
   // Aggregate (or pass through) before markup so VAT/markup are applied to the displayed cadence.
@@ -175,6 +254,7 @@ async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = 
       warnings.push('fallback_source: stekker');
     }
   }
+  if (entry.refreshFailed) warnings.push('stale_data: upstream refresh failed');
 
   return {
     prices: applied,
@@ -269,15 +349,14 @@ function getCacheStats() {
   for (const [key, entry] of __rawCache.entries()) {
     if (entry.refreshAfter <= now) continue;
     size += 1;
-    const country = key.split('|')[0];
-    byCountry[country] = (byCountry[country] || 0) + 1;
+    byCountry[key] = (byCountry[key] || 0) + 1;
     const src = entry.data?.source || 'unknown';
     bySource[src] = (bySource[src] || 0) + 1;
     if (!nextRefresh || entry.refreshAfter < nextRefresh) nextRefresh = entry.refreshAfter;
   }
   return {
     size,
-    strategy: 'daily-key + refresh-after-publish',
+    strategy: 'per-country + refresh-after-publish',
     byCountry,
     bySource,
     nextRefresh: nextRefresh ? new Date(nextRefresh).toISOString() : null

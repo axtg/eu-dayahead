@@ -1,9 +1,9 @@
 // ENTSOE Transparency Platform client (day-ahead prices, documentType A44).
 // Returns hourly or quarterly prices in the {time, priceMwh, price} shape used by the rest of the app.
-const https = require('https');
 const parseXml = require('xml-js');
 
 const { COUNTRIES } = require('./config/countries');
+const { fetchText } = require('./utils/httpClient');
 
 const RESOLUTION_MINUTES = { PT15M: 15, PT30M: 30, PT60M: 60 };
 const SEQUENCE_FIELD = 'classificationSequence_AttributeInstanceComponent.position';
@@ -13,7 +13,8 @@ class EntsoeAPI {
     this.apiKey = apiKey;
     this.host = 'web-api.tp.entsoe.eu';
     this.port = 443;
-    this.timeout = options.timeout || 15000;
+    // With Stekker's 6s fallback this stays under nginx's 30s proxy_read_timeout.
+    this.timeout = options.timeout || 22000;
   }
 
   async getCountryPrices(countryCode, dateStart, dateEnd) {
@@ -30,7 +31,7 @@ class EntsoeAPI {
     const periodEnd = end.toISOString().replace(/[-:T]/g, '').slice(0, 12);
 
     const path =
-      `/api?securityToken=${this.apiKey}` +
+      `/api?securityToken=${encodeURIComponent(this.apiKey)}` +
       '&documentType=A44' +
       `&in_Domain=${country.biddingZone}` +
       `&out_Domain=${country.biddingZone}` +
@@ -42,28 +43,12 @@ class EntsoeAPI {
   }
 
   async makeRequest(path) {
-    return new Promise((resolve, reject) => {
-      const req = https.request(
-        { hostname: this.host, port: this.port, path, method: 'GET', timeout: this.timeout },
-        res => {
-          let body = '';
-          res.on('data', chunk => (body += chunk));
-          res.on('end', () => {
-            if (res.statusCode !== 200) {
-              const reason = (body.match(/<text>([^<]+)<\/text>/) || [])[1] || `HTTP ${res.statusCode}`;
-              return reject(new Error(`ENTSOE ${res.statusCode}: ${reason}`));
-            }
-            resolve(body);
-          });
-        }
-      );
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('ENTSOE request timeout'));
-      });
-      req.end();
-    });
+    const { status, body } = await fetchText(`https://${this.host}:${this.port}${path}`, { timeoutMs: this.timeout });
+    if (status !== 200) {
+      const reason = (body.match(/<text>([^<]+)<\/text>/) || [])[1] || `HTTP ${status}`;
+      throw new Error(`ENTSOE ${status}: ${reason}`);
+    }
+    return body;
   }
 
   parseResponse(xmlData, windowStart, windowEnd) {
