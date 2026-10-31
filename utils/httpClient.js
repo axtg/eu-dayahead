@@ -20,6 +20,7 @@ async function fetchText(url, { timeoutMs, maxBytes = DEFAULT_MAX_BYTES }) {
     }
   } catch (error) {
     if (signal.aborted) throw new Error(`Request timed out after ${timeoutMs}ms`);
+    if (error.cause?.message === 'unexpected redirect') throw new Error('Request failed: unexpected redirect');
     throw new Error(`Request failed: ${error.cause?.code || 'connection error'}`);
   }
 
