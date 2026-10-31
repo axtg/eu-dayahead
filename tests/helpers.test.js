@@ -257,3 +257,22 @@ describe('Helper Functions', () => {
     });
   });
 });
+
+describe('enrichPricesWithCountryInfo hour', () => {
+  const { COUNTRIES } = require('../config/countries');
+  const hourOf = (country, time) => enrichPricesWithCountryInfo([{ time, price: 0.1 }], country)[0].hour;
+
+  // Danish formats times as 14.15, which the frontend's chart axis can't read.
+  test.each(Object.keys(COUNTRIES))('%s uses HH:mm', country => {
+    expect(hourOf(country, '2026-10-31T13:15:00.000Z')).toMatch(/^\d{2}:15$/);
+  });
+
+  test('midnight is 00:00, not 24:00', () => {
+    expect(hourOf('nl', '2026-10-30T23:00:00.000Z')).toBe('00:00');
+    expect(hourOf('dk', '2026-10-30T23:00:00.000Z')).toBe('00:00');
+  });
+
+  test('is in the country timezone', () => {
+    expect(hourOf('dk', '2026-10-31T13:15:00.000Z')).toBe('14:15');
+  });
+});
