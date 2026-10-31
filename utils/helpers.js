@@ -404,11 +404,12 @@ function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      hour: hourTime.toLocaleTimeString(country.locale, {
+      // Fixed format for machines, unlike localTime: some locales write 14.15, depending on the ICU version.
+      hour: hourTime.toLocaleTimeString('en-GB', {
         timeZone: country.timezone,
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hourCycle: 'h23'
       })
     };
 
