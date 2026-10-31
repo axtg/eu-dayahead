@@ -189,7 +189,7 @@ router.get('/:country/next/:hours', async (req, res) => {
       startTime: currentHourStart.toISOString(),
       endTime: nextHoursEnd.toISOString(),
       requestedHours: hours,
-      actualHours: result.resolutionMinutes === 15 ? Math.floor(enrichedPrices.length / 4) : enrichedPrices.length,
+      actualHours: Math.floor((enrichedPrices.length * result.resolutionMinutes) / 60),
       source: result.source,
       resolutionMinutes: result.resolutionMinutes,
       warnings: result.warnings

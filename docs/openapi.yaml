@@ -598,7 +598,7 @@ components:
         resolutionMinutes:
           type: integer
           enum: [60, 15]
-          description: Granularity of each entry in the data array.
+          description: Actual granularity of each entry in the data array. Can be 60 with interval=15M for zones that only publish hourly prices, such as CH.
           example: 60
         source:
           type: string

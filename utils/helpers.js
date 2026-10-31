@@ -107,6 +107,15 @@ function aggregateToHourly(prices) {
     .map(b => ({ time: b.time, priceMwh: b.sum / b.count, price: b.sum / b.count / 1000 }));
 }
 
+// Smallest gap between consecutive prices. Some zones (e.g. CH) only publish hourly data.
+function detectResolutionMinutes(prices) {
+  let smallestGap = Infinity;
+  for (let i = 1; i < prices.length; i += 1) {
+    smallestGap = Math.min(smallestGap, new Date(prices[i].time) - new Date(prices[i - 1].time));
+  }
+  return Number.isFinite(smallestGap) ? smallestGap / 60_000 : 60;
+}
+
 async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) {
   const country = COUNTRIES[countryCode];
   const upstreamErrors = [];
@@ -170,7 +179,7 @@ async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = 
   return {
     prices: applied,
     source: cached.source,
-    resolutionMinutes: interval === '60M' ? 60 : 15,
+    resolutionMinutes: interval === '60M' ? 60 : detectResolutionMinutes(basePrices),
     warnings: warnings.length ? warnings : undefined
   };
 }
@@ -222,7 +231,7 @@ function buildCountryResponse(countryCode, data, markupOptions, type, additional
   const country = COUNTRIES[countryCode];
   const { source, resolutionMinutes, warnings, ...rest } = additionalInfo;
   const intervalCount = data.length;
-  const totalHours = resolutionMinutes === 15 ? Math.floor(intervalCount / 4) : intervalCount;
+  const totalHours = Math.floor((intervalCount * (resolutionMinutes || 60)) / 60);
 
   const response = {
     status: 'success',
