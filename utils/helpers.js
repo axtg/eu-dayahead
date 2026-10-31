@@ -209,13 +209,15 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
   }
 }
 
-function logUpstreamFetch(countryCode, source, upstreamErrors, durationMs) {
+const DISCARDED_NOTE = ' (result discarded, cached prices kept)';
+
+function logUpstreamFetch(countryCode, source, upstreamErrors, durationMs, discarded = false) {
   if (upstreamErrors) console.error(`Upstream errors for ${countryCode}:`, upstreamErrors.join('; '));
 
   sendToLogtail({
     dt: new Date().toISOString(),
     level: upstreamErrors ? 'error' : 'info',
-    message: `Upstream fetch: ${countryCode} from ${source || 'none'}`,
+    message: `Upstream fetch: ${countryCode} from ${source || 'none'}${discarded ? DISCARDED_NOTE : ''}`,
     country: countryCode,
     source,
     upstreamErrors,
@@ -231,13 +233,19 @@ function runUpstreamFetch(countryCode) {
 
   return fetchRawPrices(countryCode, start, end, false)
     .then(data => {
-      logUpstreamFetch(countryCode, data.source, data.upstreamErrors, Date.now() - now.getTime());
       __fetchFailures.delete(countryCode);
 
       const previous = __rawCache.get(countryCode);
-      if (previous && shouldKeepPrevious(previous, data, countryCode, now)) {
-        const retryDelay = data.source === 'entsoe' ? MISSING_PRICES_RETRY_MS : FALLBACK_RETRY_MS;
-        previous.refreshFailed = true;
+      const keepPrevious = previous && shouldKeepPrevious(previous, data, countryCode, now);
+      logUpstreamFetch(countryCode, data.source, data.upstreamErrors, Date.now() - now.getTime(), keepPrevious);
+
+      if (keepPrevious) {
+        const bothEntsoe = data.source === 'entsoe' && previous.data.source === 'entsoe';
+        const retryDelay = bothEntsoe ? MISSING_PRICES_RETRY_MS : FALLBACK_RETRY_MS;
+        // A healthy ENTSOE response that doesn't reach as far as fallback prices isn't a failure.
+        // Those prices already carry a fallback warning.
+        const healthyOverFallback = data.source === 'entsoe' && !bothEntsoe && !data.upstreamErrors;
+        previous.refreshFailed = !healthyOverFallback;
         previous.refreshAfter = retryAt(countryCode, now, retryDelay);
         return previous;
       }
@@ -256,7 +264,7 @@ function runUpstreamFetch(countryCode) {
       const retryAfter = retryAt(countryCode, new Date(), FAILURE_RETRY_MS);
 
       const previous = __rawCache.get(countryCode);
-      if (previous && coversLocalDay(previous.data.prices, countryCode, new Date(), 0)) {
+      if (previous && hasPricesForToday(previous.data.prices, countryCode, new Date())) {
         previous.refreshFailed = true;
         previous.refreshAfter = retryAfter;
         return previous;
