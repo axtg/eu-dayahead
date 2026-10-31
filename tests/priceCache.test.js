@@ -502,6 +502,44 @@ describe('price cache', () => {
       expect((await fetchNl()).source).toBe('entsoe');
     });
 
+    describe('and Stekker reaches further than ENTSOE once it recovers', () => {
+      beforeEach(async () => {
+        setClock('2026-10-31T12:30:00Z');
+        stekker.mockImplementation(async () => stekkerHtml('2026-10-31', 70, 48));
+        await fetchNl();
+
+        advance(6);
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+      });
+
+      test('keeps the further prices, without claiming the refresh failed', async () => {
+        const result = await fetchNl();
+
+        expect(result.source).toBe('stekker');
+        expect(lastTime(result)).toBe('2026-11-01T22:00:00.000Z');
+        expect(result.warnings).toEqual(['fallback_source: stekker']);
+        expect(helpers.getCacheStats().staleCountries).toEqual([]);
+      });
+
+      test('checks ENTSOE again after 5 minutes and switches once it reaches as far', async () => {
+        advance(4);
+        await fetchNl();
+        expect(entsoe).toHaveBeenCalledTimes(2);
+
+        advance(1);
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31', '2026-11-01']));
+        await fetchNl();
+        await new Promise(resolve => setImmediate(resolve));
+        expect(entsoe).toHaveBeenCalledTimes(3);
+
+        const result = await fetchNl();
+        expect(result.source).toBe('entsoe');
+        expect(result.warnings).toBeUndefined();
+      });
+    });
+
     test('logs why ENTSOE failed', async () => {
       await fetchNl();
 
@@ -626,6 +664,54 @@ describe('price cache', () => {
       expect(unhandled).not.toHaveBeenCalled();
     });
 
+    describe('with only part of today cached', () => {
+      beforeEach(async () => {
+        entsoe.mockImplementation(async () => entsoeXml([], 50, { '2026-10-31': 12 }));
+        await fetchNl();
+        advance(16);
+        failEverything();
+      });
+
+      test('keeps serving those prices, with both warnings', async () => {
+        const result = await fetchNl();
+
+        expect(result.prices).toHaveLength(12);
+        expect(result.warnings).toEqual([
+          'stale_data: upstream refresh failed',
+          'incomplete_data: prices missing for part of today'
+        ]);
+        expect(helpers.getCacheStats().staleCountries).toEqual(['nl']);
+      });
+
+      test('waits a minute before trying again', async () => {
+        await fetchNl();
+        await fetchNl();
+        expect(entsoe).toHaveBeenCalledTimes(2);
+
+        advance(1);
+        await fetchNl();
+        expect(entsoe).toHaveBeenCalledTimes(3);
+      });
+
+      test('uses full prices once upstream recovers', async () => {
+        await fetchNl();
+        advance(1);
+        entsoe.mockImplementation(async () => entsoeXml(['2026-10-31']));
+
+        const result = await fetchNl();
+
+        expect(result.prices).toHaveLength(24);
+        expect(result.warnings).toBeUndefined();
+      });
+
+      test('fails once those prices are from a previous day', async () => {
+        await fetchNl();
+        setClock('2026-11-01T07:00:00Z');
+
+        await expect(fetchNl()).rejects.toThrow();
+      });
+    });
+
     test('an empty result does not replace good data', async () => {
       await fetchNl();
       setClock('2026-10-31T13:31:00Z');
@@ -679,40 +765,63 @@ describe('price cache', () => {
   });
 
   describe('upstream call logging', () => {
-    test('sends the source, country, duration and errors to the log, without the API key', async () => {
-      const originalFetch = global.fetch;
-      const originalToken = process.env.LOGTAIL_TOKEN;
+    let originalFetch;
+    let originalToken;
+
+    beforeEach(() => {
+      originalFetch = global.fetch;
+      originalToken = process.env.LOGTAIL_TOKEN;
       global.fetch = jest.fn().mockResolvedValue({ ok: true });
       process.env.LOGTAIL_TOKEN = 'test-token';
+      jest.isolateModules(() => {
+        const { EntsoeAPI } = require('../entsoe');
+        const { StekkerAPI } = require('../stekker');
+        EntsoeAPI.prototype.makeRequest = (...args) => entsoe(...args);
+        StekkerAPI.prototype.makeRequest = (...args) => stekker(...args);
+        helpers = require('../utils/helpers');
+      });
+    });
 
-      try {
-        entsoe.mockImplementation(async () => {
-          throw new Error('ENTSOE 503');
-        });
-        stekker.mockImplementation(async () => stekkerHtml('2026-10-31'));
-        jest.isolateModules(() => {
-          const { EntsoeAPI } = require('../entsoe');
-          const { StekkerAPI } = require('../stekker');
-          EntsoeAPI.prototype.makeRequest = (...args) => entsoe(...args);
-          StekkerAPI.prototype.makeRequest = (...args) => stekker(...args);
-          helpers = require('../utils/helpers');
-        });
+    afterEach(() => {
+      global.fetch = originalFetch;
+      if (originalToken === undefined) delete process.env.LOGTAIL_TOKEN;
+      else process.env.LOGTAIL_TOKEN = originalToken;
+    });
 
-        await fetchNl();
+    test('sends the source, country, duration and errors to the log, without the API key', async () => {
+      entsoe.mockImplementation(async () => {
+        throw new Error('ENTSOE 503');
+      });
+      stekker.mockImplementation(async () => stekkerHtml('2026-10-31'));
 
-        const body = global.fetch.mock.calls[0][1].body;
-        expect(JSON.parse(body)).toMatchObject({
-          message: 'Upstream fetch: nl from stekker',
-          country: 'nl',
-          source: 'stekker',
-          upstreamErrors: ['entsoe: ENTSOE 503']
-        });
-        expect(JSON.parse(body).durationMs).toEqual(expect.any(Number));
-        expect(body).not.toContain('test-key');
-      } finally {
-        global.fetch = originalFetch;
-        process.env.LOGTAIL_TOKEN = originalToken;
-      }
+      await fetchNl();
+
+      const body = global.fetch.mock.calls[0][1].body;
+      expect(JSON.parse(body)).toMatchObject({
+        message: 'Upstream fetch: nl from stekker',
+        country: 'nl',
+        source: 'stekker',
+        upstreamErrors: ['entsoe: ENTSOE 503']
+      });
+      expect(JSON.parse(body).durationMs).toEqual(expect.any(Number));
+      expect(body).not.toContain('test-key');
+    });
+
+    test('says when a fetched result was discarded in favour of cached prices', async () => {
+      setClock('2026-10-31T14:00:00Z');
+      entsoe.mockImplementation(async () => entsoeXml(['2026-10-31', '2026-11-01']));
+      await fetchNl();
+
+      setClock('2026-10-31T23:30:00Z');
+      entsoe.mockImplementation(async () => entsoeXml([], 50, { '2026-11-01': 6 }));
+      await fetchNl();
+      await new Promise(resolve => setImmediate(resolve));
+
+      const messages = global.fetch.mock.calls.map(call => JSON.parse(call[1].body).message);
+      expect(messages).toEqual([
+        'Upstream fetch: nl from entsoe',
+        'Upstream fetch: nl from entsoe (result discarded, cached prices kept)'
+      ]);
     });
   });
 });
