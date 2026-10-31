@@ -27,7 +27,7 @@ router.get('/countries', (req, res) => {
     currency: config.currency,
     timezone: config.timezone,
     defaultVat: config.defaultVat,
-    vatPercent: `${Math.round(config.defaultVat * 100)}%`
+    vatPercent: `${Number((config.defaultVat * 100).toFixed(1))}%`
   }));
 
   res.json({ status: 'success', data: countries, total: countries.length });
@@ -44,8 +44,10 @@ router.get('/:country/today', async (req, res) => {
     }
 
     let interval;
+    let markupOptions;
     try {
       interval = parseIntervalOption(req.query);
+      markupOptions = parseMarkupOptions(req.query, countryCode);
     } catch (err) {
       const handled = handleParamError(res, err);
       if (handled !== null) return;
@@ -53,7 +55,6 @@ router.get('/:country/today', async (req, res) => {
     }
 
     const country = COUNTRIES[countryCode];
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const now = new Date();
     const nowInTargetTz = toZonedTime(now, country.timezone);
@@ -96,8 +97,10 @@ router.get('/:country/next24h', async (req, res) => {
     }
 
     let interval;
+    let markupOptions;
     try {
       interval = parseIntervalOption(req.query);
+      markupOptions = parseMarkupOptions(req.query, countryCode);
     } catch (err) {
       const handled = handleParamError(res, err);
       if (handled !== null) return;
@@ -105,7 +108,6 @@ router.get('/:country/next24h', async (req, res) => {
     }
 
     const country = COUNTRIES[countryCode];
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
     const now = new Date();
 
     const nowInTargetTz = toZonedTime(now, country.timezone);
@@ -150,14 +152,16 @@ router.get('/:country/next/:hours', async (req, res) => {
       });
     }
 
-    const hours = parseInt(req.params.hours);
+    const hours = /^\d+$/.test(req.params.hours) ? Number(req.params.hours) : NaN;
     if (isNaN(hours) || hours < 1 || hours > 48) {
       return res.status(400).json({ status: 'error', message: 'Hours must be a number between 1 and 48' });
     }
 
     let interval;
+    let markupOptions;
     try {
       interval = parseIntervalOption(req.query);
+      markupOptions = parseMarkupOptions(req.query, countryCode);
     } catch (err) {
       const handled = handleParamError(res, err);
       if (handled !== null) return;
@@ -165,7 +169,6 @@ router.get('/:country/next/:hours', async (req, res) => {
     }
 
     const country = COUNTRIES[countryCode];
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
     const now = new Date();
 
     const nowInTargetTz = toZonedTime(now, country.timezone);

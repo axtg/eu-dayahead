@@ -40,7 +40,7 @@ Express REST API that aggregates day-ahead electricity prices for 9 European cou
 
 ### Markup pipeline
 
-Order in `StekkerAPI.applyMarkup`: variable markup (%) → fixed markup (currency/kWh) → VAT multiplier → round to `roundTo` decimals (default 5). `parseMarkupOptions` accepts `markup` or `fixedMarkup` (alias), `variableMarkup`, `vat`, `autoVat=true` (uses country `defaultVat`), `includeVat`, `roundTo`.
+Order in `StekkerAPI.applyMarkup`: variable markup (%) → fixed markup (currency/kWh) → VAT multiplier → round to `roundTo` decimals (default 5). `parseMarkupOptions` accepts `markup` or `fixedMarkup` (alias), `variableMarkup` (percent), `vat` (decimal or `auto`), `autoVat=true` or `includeVat=true` (country `defaultVat`), `roundTo`. An explicit `vat` wins. Invalid, out-of-range or repeated values return 400.
 
 ### Tests
 

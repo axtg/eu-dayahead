@@ -203,11 +203,12 @@ components:
     FixedMarkup:
       name: markup
       in: query
-      description: Fixed markup per kWh in EUR (e.g., 0.024 for €0.024/kWh)
+      description: Fixed markup per kWh in EUR (e.g., 0.024 for €0.024/kWh). `fixedMarkup` is an alias. Can be negative for a discount.
       schema:
         type: number
         format: float
-        minimum: 0
+        minimum: -10
+        maximum: 10
         example: 0.024
 
     VariableMarkup:
@@ -217,24 +218,28 @@ components:
       schema:
         type: number
         format: float
-        minimum: 0
+        minimum: -100
+        maximum: 1000
         example: 5
 
     VAT:
       name: vat
       in: query
-      description: VAT rate as decimal (e.g., 0.21 for 21%)
+      description: VAT rate as decimal (e.g., 0.21 for 21%), or `auto` for the country's default rate. An explicit value wins over `autoVat`, including 0.
       schema:
-        type: number
-        format: float
-        minimum: 0
-        maximum: 1
+        oneOf:
+          - type: number
+            format: float
+            minimum: 0
+            maximum: 1
+          - type: string
+            enum: [auto]
         example: 0.21
 
     AutoVAT:
       name: autoVat
       in: query
-      description: Use country's default VAT rate
+      description: Use country's default VAT rate. `includeVat` is an alias.
       schema:
         type: boolean
         example: true

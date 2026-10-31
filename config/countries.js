@@ -28,7 +28,7 @@ const COUNTRIES = {
     stekkerRegion: 'BE',
     currency: 'EUR',
     timezone: 'Europe/Brussels',
-    defaultVat: 0.21,
+    defaultVat: 0.06, // Household electricity rate; businesses pay 21%
     locale: 'nl-BE'
   },
   fr: {
@@ -55,7 +55,7 @@ const COUNTRIES = {
     stekkerRegion: 'CH',
     currency: 'EUR',
     timezone: 'Europe/Zurich',
-    defaultVat: 0.077,
+    defaultVat: 0.081,
     locale: 'de-CH'
   },
   dk: {

@@ -204,7 +204,7 @@
   function updateVatForCountry(countryCode) {
     const country = countriesCache.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
     if (country && country.defaultVat) {
-      const vatPercent = Math.round(country.defaultVat * 100);
+      const vatPercent = Number((country.defaultVat * 100).toFixed(1));
       els.vatPercent.value = vatPercent.toString();
     }
   }
