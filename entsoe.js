@@ -140,11 +140,6 @@ class EntsoeAPI {
 
     return [...byTime.values()].sort((a, b) => new Date(a.time) - new Date(b.time));
   }
-
-  // Backward-compat shim — the only consumer was the example block at the bottom of this file.
-  getDutchPrices(dateStart, dateEnd) {
-    return this.getCountryPrices('nl', dateStart, dateEnd);
-  }
 }
 
 function textOf(node) {

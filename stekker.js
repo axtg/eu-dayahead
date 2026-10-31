@@ -45,13 +45,9 @@ class StekkerAPI {
     const {
       fixedMarkup = 0, // Fixed markup in EUR/kWh (e.g., 0.024 for Next Energy)
       variableMarkup = 0, // Variable markup in % (e.g., 5 for 5%)
-      vat = 0, // VAT as decimal (e.g., 0.21 for 21%)
-      includeVat = false, // Backward compatibility
+      vat: vatRate = 0, // VAT as decimal (e.g., 0.21 for 21%)
       roundTo = 5 // Round to 5 decimal places
     } = options;
-
-    // Determine VAT rate - use vat parameter if provided, otherwise check includeVat
-    const vatRate = vat > 0 ? vat : includeVat ? 0.21 : 0;
 
     return prices.map(hour => {
       let finalPrice = hour.price;
@@ -157,67 +153,4 @@ class StekkerAPI {
   }
 }
 
-// Usage Examples
-async function getDutchEnergyPrices() {
-  const stekker = new StekkerAPI();
-
-  try {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Get raw market prices (EUR/kWh)
-    const rawPrices = await stekker.getDutchPrices(today, tomorrow, false);
-    console.log('Raw Market Prices (EUR/kWh):', JSON.stringify(rawPrices.slice(0, 3), null, 2));
-
-    // Get prices with Next Energy markup (0.024 EUR/kWh + 21% VAT)
-    const nextEnergyPrices = await stekker.getDutchPrices(today, tomorrow, false, {
-      fixedMarkup: 0.024,
-      includeVat: true
-    });
-    console.log('Next Energy Prices (with markup + VAT):', JSON.stringify(nextEnergyPrices.slice(0, 3), null, 2));
-
-    // Get forecast prices with custom markup
-    const customPrices = await stekker.getDutchPrices(null, null, true, {
-      fixedMarkup: 0.03,
-      variableMarkup: 5, // 5%
-      includeVat: true
-    });
-    console.log('Custom Markup Prices:', JSON.stringify(customPrices.slice(0, 3), null, 2));
-
-    return { rawPrices, nextEnergyPrices, customPrices };
-  } catch (error) {
-    console.error('Error fetching prices:', error.message);
-  }
-}
-
-// Simple function to get just today's prices with optional markup
-async function getTodayPrices(markupOptions = {}) {
-  const stekker = new StekkerAPI();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return await stekker.getDutchPrices(today, tomorrow, false, markupOptions);
-}
-
-// Export for use
-module.exports = { StekkerAPI, getDutchEnergyPrices, getTodayPrices };
-
-// Quick test with Next Energy markup
-if (require.main === module) {
-  getTodayPrices({
-    fixedMarkup: 0.024, // Next Energy markup
-    includeVat: true // Include 21% VAT
-  })
-    .then(prices => {
-      console.log('Next Energy Prices (EUR/kWh with VAT):');
-      prices.forEach(price => {
-        const hour = new Date(price.time).getHours();
-        console.log(`${hour.toString().padStart(2, '0')}:00 - €${price.price.toFixed(5)}/kWh`);
-      });
-    })
-    .catch(console.error);
-}
+module.exports = { StekkerAPI };

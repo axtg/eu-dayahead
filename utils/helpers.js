@@ -250,7 +250,6 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
       fixedMarkup: 0,
       variableMarkup: 0,
       vat: 0,
-      includeVat: false,
       roundTo: 5
     });
     if (!hasPricesForToday(prices, countryCode, now)) throw new Error('Stekker API Error: no prices for today');
@@ -496,6 +495,7 @@ function getCacheStats() {
 }
 
 module.exports = {
+  invalidParam,
   PRICES_UNAVAILABLE_MESSAGE,
   pricesUnavailable,
   parseMarkupOptions,

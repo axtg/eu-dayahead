@@ -11,8 +11,17 @@ const {
   fetchCountryPrices,
   enrichPricesWithCountryInfo,
   buildCountryResponse,
+  invalidParam,
   pricesUnavailable
 } = require('../utils/helpers');
+
+function requireCountry(req) {
+  const countryCode = validateCountry(req.params.country);
+  if (!countryCode) {
+    throw invalidParam(`Unsupported country: ${req.params.country}. Use /api/countries to see supported countries.`);
+  }
+  return countryCode;
+}
 
 router.get('/countries', (req, res) => {
   const countries = Object.entries(COUNTRIES).map(([code, config]) => ({
@@ -29,13 +38,7 @@ router.get('/countries', (req, res) => {
 
 router.get('/:country/today', async (req, res, next) => {
   try {
-    const countryCode = validateCountry(req.params.country);
-    if (!countryCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Unsupported country: ${req.params.country}. Use /api/countries to see supported countries.`
-      });
-    }
+    const countryCode = requireCountry(req);
 
     const interval = parseIntervalOption(req.query);
     const markupOptions = parseMarkupOptions(req.query, countryCode);
@@ -71,50 +74,48 @@ router.get('/:country/today', async (req, res, next) => {
   }
 });
 
-router.get('/:country/next24h', async (req, res, next) => {
-  try {
-    const countryCode = validateCountry(req.params.country);
-    if (!countryCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Unsupported country: ${req.params.country}. Use /api/countries to see supported countries.`
-      });
-    }
+async function sendNextHours(req, res, countryCode, hours, type, { reportHours = false } = {}) {
+  const interval = parseIntervalOption(req.query);
+  const markupOptions = parseMarkupOptions(req.query, countryCode);
 
-    const interval = parseIntervalOption(req.query);
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
+  const country = COUNTRIES[countryCode];
+  const nowInTargetTz = toZonedTime(new Date(), country.timezone);
+  const currentHourInTargetTz = startOfHour(nowInTargetTz);
+  const currentHourStart = fromZonedTime(currentHourInTargetTz, country.timezone);
+  const windowEnd = addHours(currentHourStart, hours);
 
-    const country = COUNTRIES[countryCode];
-    const now = new Date();
+  const result = await fetchCountryPrices(countryCode, markupOptions, { interval });
 
-    const nowInTargetTz = toZonedTime(now, country.timezone);
-    const currentHourInTargetTz = startOfHour(nowInTargetTz);
-    const currentHourStart = fromZonedTime(currentHourInTargetTz, country.timezone);
-    const next24HoursEnd = addHours(currentHourStart, 24);
+  const windowPrices = result.prices.filter(price => {
+    const priceTime = new Date(price.time);
+    return priceTime >= currentHourStart && priceTime < windowEnd;
+  });
 
-    const result = await fetchCountryPrices(countryCode, markupOptions, { interval });
+  if (windowPrices.length === 0) throw pricesUnavailable();
 
-    const next24Hours = result.prices.filter(price => {
-      const priceTime = new Date(price.time);
-      return priceTime >= currentHourStart && priceTime < next24HoursEnd;
-    });
+  const enrichedPrices = enrichPricesWithCountryInfo(windowPrices, countryCode, {
+    includeSpanInfo: true,
+    referenceTime: currentHourStart
+  });
 
-    if (next24Hours.length === 0) throw pricesUnavailable();
+  const actualHours = Math.floor((enrichedPrices.length * result.resolutionMinutes) / 60);
+  const hoursInfo = reportHours ? { requestedHours: hours, actualHours } : {};
 
-    const enrichedPrices = enrichPricesWithCountryInfo(next24Hours, countryCode, {
-      includeSpanInfo: true,
-      referenceTime: currentHourStart
-    });
-
-    const response = buildCountryResponse(countryCode, enrichedPrices, markupOptions, 'next24hours', {
+  res.json(
+    buildCountryResponse(countryCode, enrichedPrices, markupOptions, type, {
       startTime: currentHourStart.toISOString(),
-      endTime: next24HoursEnd.toISOString(),
+      endTime: windowEnd.toISOString(),
+      ...hoursInfo,
       source: result.source,
       resolutionMinutes: result.resolutionMinutes,
       warnings: result.warnings
-    });
+    })
+  );
+}
 
-    res.json(response);
+router.get('/:country/next24h', async (req, res, next) => {
+  try {
+    await sendNextHours(req, res, requireCountry(req), 24, 'next24hours');
   } catch (error) {
     next(error);
   }
@@ -122,55 +123,12 @@ router.get('/:country/next24h', async (req, res, next) => {
 
 router.get('/:country/next/:hours', async (req, res, next) => {
   try {
-    const countryCode = validateCountry(req.params.country);
-    if (!countryCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Unsupported country: ${req.params.country}. Use /api/countries to see supported countries.`
-      });
-    }
+    const countryCode = requireCountry(req);
 
     const hours = /^\d+$/.test(req.params.hours) ? Number(req.params.hours) : NaN;
-    if (isNaN(hours) || hours < 1 || hours > 48) {
-      return res.status(400).json({ status: 'error', message: 'Hours must be a number between 1 and 48' });
-    }
+    if (isNaN(hours) || hours < 1 || hours > 48) throw invalidParam('Hours must be a number between 1 and 48');
 
-    const interval = parseIntervalOption(req.query);
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
-
-    const country = COUNTRIES[countryCode];
-    const now = new Date();
-
-    const nowInTargetTz = toZonedTime(now, country.timezone);
-    const currentHourInTargetTz = startOfHour(nowInTargetTz);
-    const currentHourStart = fromZonedTime(currentHourInTargetTz, country.timezone);
-    const nextHoursEnd = addHours(currentHourStart, hours);
-
-    const result = await fetchCountryPrices(countryCode, markupOptions, { interval });
-
-    const nextHours = result.prices.filter(price => {
-      const priceTime = new Date(price.time);
-      return priceTime >= currentHourStart && priceTime < nextHoursEnd;
-    });
-
-    if (nextHours.length === 0) throw pricesUnavailable();
-
-    const enrichedPrices = enrichPricesWithCountryInfo(nextHours, countryCode, {
-      includeSpanInfo: true,
-      referenceTime: currentHourStart
-    });
-
-    const response = buildCountryResponse(countryCode, enrichedPrices, markupOptions, `next${hours}hours`, {
-      startTime: currentHourStart.toISOString(),
-      endTime: nextHoursEnd.toISOString(),
-      requestedHours: hours,
-      actualHours: Math.floor((enrichedPrices.length * result.resolutionMinutes) / 60),
-      source: result.source,
-      resolutionMinutes: result.resolutionMinutes,
-      warnings: result.warnings
-    });
-
-    res.json(response);
+    await sendNextHours(req, res, countryCode, hours, `next${hours}hours`, { reportHours: true });
   } catch (error) {
     next(error);
   }
