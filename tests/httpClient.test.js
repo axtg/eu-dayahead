@@ -90,7 +90,7 @@ describe('fetchText', () => {
       return res.end();
     };
 
-    await expect(fetchText(baseUrl, { timeoutMs: 1000 })).rejects.toThrow();
+    await expect(fetchText(baseUrl, { timeoutMs: 1000 })).rejects.toThrow('Request failed: unexpected redirect');
     expect(followed).toBe(false);
   });
 

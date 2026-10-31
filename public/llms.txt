@@ -29,7 +29,10 @@ License: MIT (code) · Data attribution: ENTSOE Transparency Platform, stekker.a
 - **Fallback**: stekker.app — used only when ENTSOE is unavailable or no key
   is configured. Limited country coverage (rejects several non-NL bidding
   zones such as DE-LU) and a known artifact at HH:00 quarters. When Stekker
-  serves the response, the body includes a top-level `warnings` array.
+  serves the response, the body includes a top-level `warnings` array. The
+  same array carries `stale_data` if an upstream refresh failed and earlier
+  prices are being served, or `incomplete_data` if prices are missing for part
+  of today.
 
 ## Endpoints
 
