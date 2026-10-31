@@ -96,8 +96,10 @@ jobs:
           # Validate using our npm script
           npm run validate-api
 
-      - name: Build project
-        run: npm run build --if-present
+      - name: Check the compiled CSS is up to date
+        run: |
+          npm run build:css
+          git diff --exit-code public/tailwind.css || (echo "Run npm run build:css and commit the result" && exit 1)
 
       - name: Test API endpoints (smoke test)
         run: |

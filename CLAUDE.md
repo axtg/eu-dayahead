@@ -15,6 +15,7 @@ npm run lint             # ESLint check
 npm run lint:fix         # ESLint auto-fix
 npm run format           # Prettier write
 npm run validate-api     # Validate docs/openapi.yaml via swagger-parser
+npm run build:css        # Rebuild public/tailwind.css after adding Tailwind classes
 npm run docker:build     # docker build -f docker/Dockerfile -t eu-energy-api .
 ```
 
@@ -51,6 +52,7 @@ Order in `StekkerAPI.applyMarkup`: variable markup (%) → fixed markup (currenc
 
 - Single quotes, semicolons, 2-space indent, no trailing commas, max 120 cols (see `eslint.config.js`).
 - `console.log`/`console.error` are allowed (server app); errors are forwarded to Better Stack via `logError`.
+- `public/tailwind.css` is built from the classes in `public/index.html` and `public/app.js`. After adding a class, run `npm run build:css`, commit the result and bump `?v=` on its link in `index.html`, because nginx caches CSS for a day. CI fails if the file is out of date.
 - `middleware/securityHeaders.js` holds the enforced Content-Security-Policy. A new external script, style or connection in `public/` or `docs/index.html` must be added to its source lists. Inline scripts are hashed at startup, so they need no change; inline event handlers aren't allowed.
 - Route handlers pass errors to the handler in `index.js` with `next(error)`. Set `statusCode` on an error to choose the status. Only messages of 4xx errors reach clients.
-- Static frontend lives in `public/` (vanilla JS + Tailwind CDN + Chart.js); the OpenAPI spec at `docs/openapi.yaml` is the contract — keep it in sync when adding/changing endpoints and run `npm run validate-api`.
+- Static frontend lives in `public/` (vanilla JS + compiled Tailwind + Chart.js); the OpenAPI spec at `docs/openapi.yaml` is the contract — keep it in sync when adding/changing endpoints and run `npm run validate-api`.
