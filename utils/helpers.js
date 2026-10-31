@@ -17,14 +17,14 @@ const ENTSOE_PUBLISH_MINUTE_CET = 30;
 const ENTSOE_PUBLISH_TZ = 'Europe/Brussels';
 
 const FALLBACK_RETRY_MS = 5 * 60_000; // Fallback data is replaced by ENTSOE data as soon as it recovers
-const LATE_PUBLISH_RETRY_MS = 15 * 60_000; // Next-day prices can arrive after the publish boundary
+const MISSING_PRICES_RETRY_MS = 15 * 60_000; // Prices can arrive after the publish boundary
 const FAILURE_RETRY_MS = 60_000; // Don't call failing upstreams on every request
 
-// countryCode -> { refreshAfter, refreshFailed, data: { source, prices, upstreamErrors? } }
+// countryCode -> { fetchedAt, refreshAfter, refreshFailed, data: { source, prices, upstreamErrors? } }
 const __rawCache = new Map();
 // countryCode -> promise of the running upstream fetch, shared by concurrent requests
 const __inFlight = new Map();
-// countryCode -> { error, retryAfter }, for countries with nothing cached yet
+// countryCode -> { error, retryAfter }, for countries with no cached prices covering today
 const __fetchFailures = new Map();
 
 function localDayStart(countryCode, now, dayOffset) {
@@ -41,34 +41,69 @@ function coversLocalDay(prices, countryCode, now, dayOffset) {
   return new Date(prices[prices.length - 1].time).getTime() >= lastHourStart;
 }
 
+function hasPricesForToday(prices, countryCode, now) {
+  const start = localDayStart(countryCode, now, 0);
+  const end = localDayStart(countryCode, now, 1);
+  return prices.some(price => {
+    const time = new Date(price.time).getTime();
+    return time >= start && time < end;
+  });
+}
+
+function lastPriceTime(prices) {
+  return new Date(prices[prices.length - 1].time).getTime();
+}
+
+// Retries stop at local midnight, when an entry without the new day stops being usable.
+function retryAt(countryCode, now, delayMs) {
+  return Math.min(now.getTime() + delayMs, localDayStart(countryCode, now, 1));
+}
+
 // Single canonical upstream window per country per day, wide enough to cover
 // /today, /next24h, and /next/N (N≤48). All endpoints filter the result
 // themselves; this is just the raw fetch boundary.
 function canonicalFetchWindow(countryCode, now) {
-  const tz = COUNTRIES[countryCode].timezone;
-  const todayStartInTz = startOfDay(toZonedTime(now, tz));
-  const startInTz = new Date(todayStartInTz);
-  startInTz.setDate(startInTz.getDate() - 1);
-  const endInTz = new Date(todayStartInTz);
-  endInTz.setDate(endInTz.getDate() + 3);
-  return { start: fromZonedTime(startInTz, tz), end: fromZonedTime(endInTz, tz) };
+  return { start: new Date(localDayStart(countryCode, now, -1)), end: new Date(localDayStart(countryCode, now, 3)) };
 }
 
-// Fallback data: retry ENTSOE soon. Before today's 14:30 CET: refresh at 14:30 CET
-// (so we pick up the next auction). After 14:30 CET: good until midnight in the
-// country's timezone, unless the next day hasn't been published yet.
-function computeRefreshAfter(countryCode, now, data) {
-  if (ENTSOE_API_KEY && data.source !== 'entsoe') return now.getTime() + FALLBACK_RETRY_MS;
-
-  const cetNow = toZonedTime(now, ENTSOE_PUBLISH_TZ);
-  const cetPublishToday = new Date(cetNow);
+function publishBoundary(now) {
+  const cetPublishToday = new Date(toZonedTime(now, ENTSOE_PUBLISH_TZ));
   cetPublishToday.setHours(ENTSOE_PUBLISH_HOUR_CET, ENTSOE_PUBLISH_MINUTE_CET, 0, 0);
-  const publishUtc = fromZonedTime(cetPublishToday, ENTSOE_PUBLISH_TZ).getTime();
-  if (now.getTime() < publishUtc) return publishUtc;
+  return fromZonedTime(cetPublishToday, ENTSOE_PUBLISH_TZ).getTime();
+}
+
+// Fallback data: retry ENTSOE soon. Missing today, or the next day after 14:30 CET: retry
+// soon. Otherwise refresh at 14:30 CET (to pick up the next auction) or, once past it, at
+// midnight in the country's timezone.
+function computeRefreshAfter(countryCode, now, data) {
+  if (ENTSOE_API_KEY && data.source !== 'entsoe') return retryAt(countryCode, now, FALLBACK_RETRY_MS);
 
   const midnight = localDayStart(countryCode, now, 1);
-  if (coversLocalDay(data.prices, countryCode, now, 1)) return midnight;
-  return Math.min(now.getTime() + LATE_PUBLISH_RETRY_MS, midnight);
+  const retrySoon = retryAt(countryCode, now, MISSING_PRICES_RETRY_MS);
+  if (!coversLocalDay(data.prices, countryCode, now, 0)) return retrySoon;
+
+  const publishUtc = publishBoundary(now);
+  if (now.getTime() < publishUtc) return publishUtc;
+
+  return coversLocalDay(data.prices, countryCode, now, 1) ? midnight : retrySoon;
+}
+
+// An expired entry can only stand in for a refresh if nothing newer should exist: it has today's
+// prices, and it's from after today's publication, or that hasn't happened yet. If a refresh just
+// failed, there's nothing newer to wait for either, and the response carries a warning.
+function canServeWhileRefreshing(entry, countryCode, now) {
+  if (!coversLocalDay(entry.data.prices, countryCode, now, 0)) return false;
+  const publishUtc = publishBoundary(now);
+  return entry.refreshFailed || now.getTime() < publishUtc || entry.fetchedAt >= publishUtc;
+}
+
+// Prices that are still usable are only replaced by a result reaching as far ahead. A fallback
+// result has to reach further than ENTSOE prices to replace them.
+function shouldKeepPrevious(previous, data, countryCode, now) {
+  if (!coversLocalDay(previous.data.prices, countryCode, now, 0)) return false;
+  const reach = lastPriceTime(data.prices) - lastPriceTime(previous.data.prices);
+  const fallbackOverEntsoe = data.source !== 'entsoe' && previous.data.source === 'entsoe';
+  return fallbackOverEntsoe ? reach <= 0 : reach < 0;
 }
 
 function parseMarkupOptions(query, country) {
@@ -131,12 +166,20 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
   const country = COUNTRIES[countryCode];
   const upstreamErrors = [];
 
+  const now = new Date();
+  let partialEntsoePrices = null;
+
   if (ENTSOE_API_KEY) {
     try {
       const entsoe = new EntsoeAPI(ENTSOE_API_KEY);
       const prices = await entsoe.getCountryPrices(countryCode, dateStart, dateEnd);
-      if (prices.length > 0) return { source: 'entsoe', prices };
-      upstreamErrors.push('entsoe: empty response');
+      if (coversLocalDay(prices, countryCode, now, 0)) return { source: 'entsoe', prices };
+      if (hasPricesForToday(prices, countryCode, now)) {
+        partialEntsoePrices = prices;
+        upstreamErrors.push('entsoe: prices missing for part of today');
+      } else {
+        upstreamErrors.push('entsoe: no prices for today');
+      }
     } catch (e) {
       upstreamErrors.push(`entsoe: ${e.message}`);
     }
@@ -153,10 +196,14 @@ async function fetchRawPrices(countryCode, dateStart, dateEnd, includeForecast) 
       includeVat: false,
       roundTo: 5
     });
-    if (prices.length === 0) throw new Error('Stekker API Error: no prices in the requested window');
+    if (!hasPricesForToday(prices, countryCode, now)) throw new Error('Stekker API Error: no prices for today');
+    if (partialEntsoePrices && lastPriceTime(prices) <= lastPriceTime(partialEntsoePrices)) {
+      return { source: 'entsoe', prices: partialEntsoePrices, upstreamErrors };
+    }
     return { source: 'stekker', prices, upstreamErrors: upstreamErrors.length ? upstreamErrors : undefined };
   } catch (e) {
     upstreamErrors.push(`stekker: ${e.message}`);
+    if (partialEntsoePrices) return { source: 'entsoe', prices: partialEntsoePrices, upstreamErrors };
     e.upstreamErrors = upstreamErrors;
     throw e;
   }
@@ -186,16 +233,30 @@ function runUpstreamFetch(countryCode) {
     .then(data => {
       logUpstreamFetch(countryCode, data.source, data.upstreamErrors, Date.now() - now.getTime());
       __fetchFailures.delete(countryCode);
-      const entry = { data, refreshFailed: false, refreshAfter: computeRefreshAfter(countryCode, now, data) };
+
+      const previous = __rawCache.get(countryCode);
+      if (previous && shouldKeepPrevious(previous, data, countryCode, now)) {
+        const retryDelay = data.source === 'entsoe' ? MISSING_PRICES_RETRY_MS : FALLBACK_RETRY_MS;
+        previous.refreshFailed = true;
+        previous.refreshAfter = retryAt(countryCode, now, retryDelay);
+        return previous;
+      }
+
+      const entry = {
+        data,
+        fetchedAt: now.getTime(),
+        refreshFailed: false,
+        refreshAfter: computeRefreshAfter(countryCode, now, data)
+      };
       __rawCache.set(countryCode, entry);
       return entry;
     })
     .catch(error => {
       logUpstreamFetch(countryCode, null, error.upstreamErrors, Date.now() - now.getTime());
-      const retryAfter = Date.now() + FAILURE_RETRY_MS;
+      const retryAfter = retryAt(countryCode, new Date(), FAILURE_RETRY_MS);
 
       const previous = __rawCache.get(countryCode);
-      if (previous) {
+      if (previous && coversLocalDay(previous.data.prices, countryCode, new Date(), 0)) {
         previous.refreshFailed = true;
         previous.refreshAfter = retryAfter;
         return previous;
@@ -216,13 +277,10 @@ async function getCacheEntry(countryCode) {
   const entry = __rawCache.get(countryCode);
   if (entry && entry.refreshAfter > Date.now()) return entry;
 
-  if (entry) {
-    // Still has today's prices, so refresh in the background rather than making this visitor wait.
-    if (coversLocalDay(entry.data.prices, countryCode, new Date(), 0)) {
-      refreshCountry(countryCode);
-      return entry;
-    }
-    return refreshCountry(countryCode);
+  if (entry && canServeWhileRefreshing(entry, countryCode, new Date())) {
+    // A failure is already logged by the fetch, and this visitor has their prices either way.
+    refreshCountry(countryCode).catch(() => {});
+    return entry;
   }
 
   const failure = __fetchFailures.get(countryCode);
@@ -255,6 +313,9 @@ async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = 
     }
   }
   if (entry.refreshFailed) warnings.push('stale_data: upstream refresh failed');
+  if (!coversLocalDay(cached.prices, countryCode, new Date(), 0)) {
+    warnings.push('incomplete_data: prices missing for part of today');
+  }
 
   return {
     prices: applied,
@@ -346,7 +407,9 @@ function getCacheStats() {
   const byCountry = {};
   const bySource = {};
   let nextRefresh = null;
+  const staleCountries = [];
   for (const [key, entry] of __rawCache.entries()) {
+    if (entry.refreshFailed) staleCountries.push(key);
     if (entry.refreshAfter <= now) continue;
     size += 1;
     byCountry[key] = (byCountry[key] || 0) + 1;
@@ -359,6 +422,8 @@ function getCacheStats() {
     strategy: 'per-country + refresh-after-publish',
     byCountry,
     bySource,
+    staleCountries,
+    failedCountries: [...__fetchFailures.keys()],
     nextRefresh: nextRefresh ? new Date(nextRefresh).toISOString() : null
   };
 }

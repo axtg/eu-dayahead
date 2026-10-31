@@ -370,11 +370,11 @@ describe('European Energy Prices API', () => {
     test('response.info.source is one of {entsoe, stekker}', async () => {
       const response = await request(app).get('/api/nl/today').expect(200);
       expect(['entsoe', 'stekker']).toContain(response.body.info.source);
-      // warnings should only appear on fallback
+      // ENTSOE responses only carry a warning if a refresh failed and earlier prices are served
       if (response.body.info.source === 'stekker') {
         expect(Array.isArray(response.body.warnings)).toBe(true);
       } else {
-        expect(response.body.warnings).toBeUndefined();
+        (response.body.warnings || []).forEach(warning => expect(warning).toMatch(/^stale_data/));
       }
     }, 15000);
   });
