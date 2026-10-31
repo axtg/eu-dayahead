@@ -23,7 +23,6 @@ app.use(
     origin: process.env.CORS_ORIGIN || '*'
   })
 );
-app.use(express.json());
 
 // Add EU-based Better Stack logging middleware
 app.use(loggingMiddleware);

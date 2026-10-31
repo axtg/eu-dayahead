@@ -149,6 +149,17 @@ describe('European Energy Prices API', () => {
       expect(response.body).toHaveProperty('status', 'error');
       expect(response.body.message).toContain('Endpoint not found');
     });
+
+    test('POST with a malformed JSON body should get the JSON 404, because request bodies are not parsed', async () => {
+      const response = await request(app)
+        .post('/api/countries')
+        .set('Content-Type', 'application/json')
+        .send('{bad')
+        .expect(404);
+
+      expect(response.body).toHaveProperty('status', 'error');
+      expect(response.body.message).toContain('Endpoint not found');
+    });
   });
 
   describe('Regression Tests - Timezone and Hour Count Bugs', () => {
