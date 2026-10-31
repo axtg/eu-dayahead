@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const request = require('supertest');
 
-const { loggingMiddleware } = require('../middleware/logging');
+const { loggingMiddleware, logError, getClientId } = require('../middleware/logging');
 
 const SERVER_SCRIPT =
   "require('./index').listen(0, '127.0.0.1', function () { console.log('PORT=' + this.address().port); });";
@@ -101,6 +101,86 @@ describe('Logging middleware', () => {
     } finally {
       process.env.LOGTAIL_TOKEN = originalToken;
     }
+  });
+
+  describe('client ID', () => {
+    const CLIENT_IP = '203.0.113.7';
+
+    // Runs a request through a token-enabled copy of the middleware and returns what was sent
+    async function captureLogEntry(setupApp) {
+      const originalFetch = global.fetch;
+      const originalToken = process.env.LOGTAIL_TOKEN;
+      global.fetch = jest.fn().mockResolvedValue({ ok: true });
+      process.env.LOGTAIL_TOKEN = 'test-token';
+
+      try {
+        let middleware;
+        let logErrorWithToken;
+        jest.isolateModules(() => {
+          ({ loggingMiddleware: middleware, logError: logErrorWithToken } = require('../middleware/logging'));
+        });
+
+        await setupApp(middleware, logErrorWithToken);
+
+        return global.fetch.mock.calls.map(([, options]) => options.body);
+      } finally {
+        global.fetch = originalFetch;
+        process.env.LOGTAIL_TOKEN = originalToken;
+      }
+    }
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test('is stable for the same IP on the same day and differs between IPs', () => {
+      expect(getClientId(CLIENT_IP)).toBe(getClientId(CLIENT_IP));
+      expect(getClientId(CLIENT_IP)).not.toBe(getClientId('203.0.113.8'));
+      expect(getClientId(CLIENT_IP)).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    test('changes when the UTC day changes', () => {
+      jest.useFakeTimers({ now: new Date('2026-10-31T23:59:59Z') });
+      const before = getClientId(CLIENT_IP);
+
+      jest.setSystemTime(new Date('2026-11-01T00:00:00Z'));
+
+      expect(getClientId(CLIENT_IP)).not.toBe(before);
+    });
+
+    test('is null when there is no IP', () => {
+      expect(getClientId(undefined)).toBeNull();
+    });
+
+    test('request logs carry a client ID and never the IP', async () => {
+      const [body] = await captureLogEntry(async middleware => {
+        const app = express();
+        app.set('trust proxy', 'loopback');
+        app.use(middleware);
+        app.get('/ok', (req, res) => res.json({ ok: true }));
+        await request(app).get('/ok').set('X-Forwarded-For', CLIENT_IP);
+      });
+
+      const entry = JSON.parse(body);
+      expect(entry.clientId).toMatch(/^[0-9a-f]{16}$/);
+      expect(entry).not.toHaveProperty('ip');
+      expect(body).not.toContain(CLIENT_IP);
+    });
+
+    test('error logs carry a client ID and never the IP', async () => {
+      const [body] = await captureLogEntry(async (middleware, logErrorWithToken) => {
+        logErrorWithToken(new Error('boom'), { ip: CLIENT_IP, originalUrl: '/x', method: 'GET' });
+      });
+
+      const entry = JSON.parse(body);
+      expect(entry.clientId).toMatch(/^[0-9a-f]{16}$/);
+      expect(entry).not.toHaveProperty('ip');
+      expect(body).not.toContain(CLIENT_IP);
+    });
+
+    test('logError without a request has no client ID and does not throw', () => {
+      expect(() => logError(new Error('boom'))).not.toThrow();
+    });
   });
 
   test('a failure while building the log entry does not break the response', async () => {
