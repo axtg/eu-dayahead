@@ -51,6 +51,6 @@ Order in `StekkerAPI.applyMarkup`: variable markup (%) → fixed markup (currenc
 
 - Single quotes, semicolons, 2-space indent, no trailing commas, max 120 cols (see `.eslintrc.js`).
 - `console.log`/`console.error` are allowed (server app); errors are forwarded to Better Stack via `logError`.
-- `middleware/securityHeaders.js` holds the Content-Security-Policy (report-only for now). A new external script, style or connection in `public/` or `docs/index.html` must be added to its source lists. Inline scripts are hashed at startup, so they need no change; inline event handlers aren't allowed.
+- `middleware/securityHeaders.js` holds the enforced Content-Security-Policy. A new external script, style or connection in `public/` or `docs/index.html` must be added to its source lists. Inline scripts are hashed at startup, so they need no change; inline event handlers aren't allowed.
 - Route handlers pass errors to the handler in `index.js` with `next(error)`. Set `statusCode` on an error to choose the status. Only messages of 4xx errors reach clients.
 - Static frontend lives in `public/` (vanilla JS + Tailwind CDN + Chart.js); the OpenAPI spec at `docs/openapi.yaml` is the contract — keep it in sync when adding/changing endpoints and run `npm run validate-api`.

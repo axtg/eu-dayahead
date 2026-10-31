@@ -133,6 +133,7 @@
         const ui = SwaggerUIBundle({
           url: '/docs/openapi.yaml',
           dom_id: '#swagger-ui',
+          validatorUrl: null,
           deepLinking: true,
           presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
           plugins: [SwaggerUIBundle.plugins.DownloadUrl],
