@@ -13,6 +13,7 @@ const { loggingMiddleware, logError } = require('./middleware/logging');
 const { createRateLimiter, parseRateLimit } = require('./middleware/rateLimit');
 
 // Import route handlers
+const { PRICES_UNAVAILABLE_MESSAGE } = require('./utils/helpers');
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
 const docsRoutes = require('./routes/docs');
@@ -83,15 +84,22 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handler
-app.use((error, req, res) => {
-  // Log error to Better Stack
-  logError(error, req);
+// Express only treats a middleware with four arguments as an error handler.
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
 
-  res.status(500).json({
-    status: 'error',
-    message: 'Internal server error'
-  });
+  const status = error.statusCode || error.status || 500;
+  const isUpstreamFailure = status === 503;
+
+  // Upstream failures are already logged by the fetch, which many requests can share.
+  if (status >= 500 && !isUpstreamFailure) logError(error, req);
+
+  // Only client errors are safe to explain. Other messages can contain internal details.
+  let message = 'Internal server error';
+  if (status < 500) message = error.message;
+  if (isUpstreamFailure) message = PRICES_UNAVAILABLE_MESSAGE;
+
+  return res.status(status).json({ status: 'error', message });
 });
 
 // Start server only if this file is run directly

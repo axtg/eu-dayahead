@@ -10,15 +10,9 @@ const {
   validateCountry,
   fetchCountryPrices,
   enrichPricesWithCountryInfo,
-  buildCountryResponse
+  buildCountryResponse,
+  pricesUnavailable
 } = require('../utils/helpers');
-
-function handleParamError(res, err) {
-  if (err && err.statusCode) {
-    return res.status(err.statusCode).json({ status: 'error', message: err.message });
-  }
-  return null;
-}
 
 router.get('/countries', (req, res) => {
   const countries = Object.entries(COUNTRIES).map(([code, config]) => ({
@@ -33,7 +27,7 @@ router.get('/countries', (req, res) => {
   res.json({ status: 'success', data: countries, total: countries.length });
 });
 
-router.get('/:country/today', async (req, res) => {
+router.get('/:country/today', async (req, res, next) => {
   try {
     const countryCode = validateCountry(req.params.country);
     if (!countryCode) {
@@ -43,16 +37,8 @@ router.get('/:country/today', async (req, res) => {
       });
     }
 
-    let interval;
-    let markupOptions;
-    try {
-      interval = parseIntervalOption(req.query);
-      markupOptions = parseMarkupOptions(req.query, countryCode);
-    } catch (err) {
-      const handled = handleParamError(res, err);
-      if (handled !== null) return;
-      throw err;
-    }
+    const interval = parseIntervalOption(req.query);
+    const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const country = COUNTRIES[countryCode];
 
@@ -81,12 +67,11 @@ router.get('/:country/today', async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error(`Error fetching ${req.params.country} today prices:`, error);
-    res.status(500).json({ status: 'error', message: error.message });
+    next(error);
   }
 });
 
-router.get('/:country/next24h', async (req, res) => {
+router.get('/:country/next24h', async (req, res, next) => {
   try {
     const countryCode = validateCountry(req.params.country);
     if (!countryCode) {
@@ -96,16 +81,8 @@ router.get('/:country/next24h', async (req, res) => {
       });
     }
 
-    let interval;
-    let markupOptions;
-    try {
-      interval = parseIntervalOption(req.query);
-      markupOptions = parseMarkupOptions(req.query, countryCode);
-    } catch (err) {
-      const handled = handleParamError(res, err);
-      if (handled !== null) return;
-      throw err;
-    }
+    const interval = parseIntervalOption(req.query);
+    const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const country = COUNTRIES[countryCode];
     const now = new Date();
@@ -122,6 +99,8 @@ router.get('/:country/next24h', async (req, res) => {
       return priceTime >= currentHourStart && priceTime < next24HoursEnd;
     });
 
+    if (next24Hours.length === 0) throw pricesUnavailable();
+
     const enrichedPrices = enrichPricesWithCountryInfo(next24Hours, countryCode, {
       includeSpanInfo: true,
       referenceTime: currentHourStart
@@ -137,12 +116,11 @@ router.get('/:country/next24h', async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error(`Error fetching ${req.params.country} next 24h prices:`, error);
-    res.status(500).json({ status: 'error', message: error.message });
+    next(error);
   }
 });
 
-router.get('/:country/next/:hours', async (req, res) => {
+router.get('/:country/next/:hours', async (req, res, next) => {
   try {
     const countryCode = validateCountry(req.params.country);
     if (!countryCode) {
@@ -157,16 +135,8 @@ router.get('/:country/next/:hours', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Hours must be a number between 1 and 48' });
     }
 
-    let interval;
-    let markupOptions;
-    try {
-      interval = parseIntervalOption(req.query);
-      markupOptions = parseMarkupOptions(req.query, countryCode);
-    } catch (err) {
-      const handled = handleParamError(res, err);
-      if (handled !== null) return;
-      throw err;
-    }
+    const interval = parseIntervalOption(req.query);
+    const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const country = COUNTRIES[countryCode];
     const now = new Date();
@@ -182,6 +152,8 @@ router.get('/:country/next/:hours', async (req, res) => {
       const priceTime = new Date(price.time);
       return priceTime >= currentHourStart && priceTime < nextHoursEnd;
     });
+
+    if (nextHours.length === 0) throw pricesUnavailable();
 
     const enrichedPrices = enrichPricesWithCountryInfo(nextHours, countryCode, {
       includeSpanInfo: true,
@@ -200,8 +172,7 @@ router.get('/:country/next/:hours', async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error(`Error fetching ${req.params.country} next ${req.params.hours}h prices:`, error);
-    res.status(500).json({ status: 'error', message: error.message });
+    next(error);
   }
 });
 

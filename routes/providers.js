@@ -7,7 +7,7 @@ const { startOfDay, endOfDay, addDays } = require('date-fns');
 const { fetchCountryPrices, buildCountryResponse, parseIntervalOption } = require('../utils/helpers');
 
 // Next Energy preset (Netherlands)
-router.get('/next-energy', async (req, res) => {
+router.get('/next-energy', async (req, res, next) => {
   try {
     const { COUNTRIES } = require('../config/countries');
     const country = COUNTRIES.nl;
@@ -25,13 +25,7 @@ router.get('/next-energy', async (req, res) => {
     const today = fromZonedTime(todayStartInTargetTz, country.timezone);
     const tomorrow = fromZonedTime(tomorrowEndInTargetTz, country.timezone);
 
-    let interval;
-    try {
-      interval = parseIntervalOption(req.query);
-    } catch (err) {
-      if (err.statusCode) return res.status(err.statusCode).json({ status: 'error', message: err.message });
-      throw err;
-    }
+    const interval = parseIntervalOption(req.query);
 
     const result = await fetchCountryPrices('nl', { fixedMarkup: 0.024, vat: 0.21 }, { interval });
 
@@ -59,15 +53,12 @@ router.get('/next-energy', async (req, res) => {
       fetchedAt: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 });
 
 // Generic provider endpoint for any country
-router.get('/:provider/:country', async (req, res) => {
+router.get('/:provider/:country', async (req, res, next) => {
   try {
     const { provider, country } = req.params;
 
@@ -132,13 +123,7 @@ router.get('/:provider/:country', async (req, res) => {
       markupOptions.vat = countryConfig.defaultVat;
     }
 
-    let interval;
-    try {
-      interval = parseIntervalOption(req.query);
-    } catch (err) {
-      if (err.statusCode) return res.status(err.statusCode).json({ status: 'error', message: err.message });
-      throw err;
-    }
+    const interval = parseIntervalOption(req.query);
 
     const result = await fetchCountryPrices(country.toLowerCase(), markupOptions, { interval });
 
@@ -159,10 +144,7 @@ router.get('/:provider/:country', async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 });
 
