@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs
@@ -25,7 +25,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js
+  CMD node docker/healthcheck.js
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "index.js"]

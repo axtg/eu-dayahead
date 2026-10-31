@@ -74,8 +74,8 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 ```bash
 # Build and run with Docker
-docker build -t eu-energy-api .
-docker run -p 3000:3000 eu-energy-api
+npm run docker:build
+docker run --env-file .env -p 3000:3000 eu-energy-api
 
 # Or use Docker compose
 docker compose up -d
