@@ -88,6 +88,21 @@ describe('Logging middleware', () => {
     }
   });
 
+  test('no part of the token is written to the console at startup', () => {
+    const originalToken = process.env.LOGTAIL_TOKEN;
+    process.env.LOGTAIL_TOKEN = 'SECRETTOKENVALUE';
+    console.log.mockClear();
+
+    try {
+      jest.isolateModules(() => require('../middleware/logging'));
+
+      expect(console.log).toHaveBeenCalled();
+      expect(JSON.stringify(console.log.mock.calls)).not.toContain('SECRETTO');
+    } finally {
+      process.env.LOGTAIL_TOKEN = originalToken;
+    }
+  });
+
   test('a failure while building the log entry does not break the response', async () => {
     const app = express();
     app.use(loggingMiddleware);

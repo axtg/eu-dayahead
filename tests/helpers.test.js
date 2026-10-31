@@ -75,6 +75,11 @@ describe('Helper Functions', () => {
       expect(validateCountry(null)).toBe(null);
       expect(validateCountry(undefined)).toBe(null);
     });
+
+    test('should return null for names inherited from Object.prototype', () => {
+      expect(validateCountry('constructor')).toBe(null);
+      expect(validateCountry('__proto__')).toBe(null);
+    });
   });
 
   describe('enrichPricesWithCountryInfo', () => {

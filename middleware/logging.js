@@ -4,7 +4,7 @@ const logtailEndpoint = process.env.LOGTAIL_ENDPOINT || 'https://s1319479.eu-nbg
 if (!logtailToken) {
   console.warn('⚠️  LOGTAIL_TOKEN not found in environment variables');
 } else {
-  console.log('✅ Logtail token loaded:', logtailToken.substring(0, 8) + '...');
+  console.log('✅ Logtail token loaded');
 }
 
 // Send log via HTTP endpoint

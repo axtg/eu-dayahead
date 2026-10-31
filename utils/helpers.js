@@ -84,7 +84,7 @@ function parseIntervalOption(query) {
 }
 
 function validateCountry(countryCode) {
-  if (!countryCode || !COUNTRIES[countryCode.toLowerCase()]) return null;
+  if (!countryCode || !Object.hasOwn(COUNTRIES, countryCode.toLowerCase())) return null;
   return countryCode.toLowerCase();
 }
 

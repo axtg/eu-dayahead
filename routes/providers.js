@@ -90,7 +90,8 @@ router.get('/:provider/:country', async (req, res) => {
       }
     };
 
-    const providerConfig = PROVIDER_PRESETS[provider.toLowerCase()];
+    const providerKey = provider.toLowerCase();
+    const providerConfig = Object.hasOwn(PROVIDER_PRESETS, providerKey) ? PROVIDER_PRESETS[providerKey] : null;
 
     if (!providerConfig) {
       return res.status(404).json({

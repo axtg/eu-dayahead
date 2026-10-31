@@ -160,6 +160,24 @@ describe('European Energy Prices API', () => {
       expect(response.body).toHaveProperty('status', 'error');
       expect(response.body.message).toContain('Endpoint not found');
     });
+
+    test.each(['constructor', '__proto__'])(
+      'GET /api/providers/%s/nl should return 404 for an unknown provider',
+      async name => {
+        const response = await request(app).get(`/api/providers/${name}/nl`).expect(404);
+
+        expect(response.body.message).toContain('not found');
+      }
+    );
+
+    test.each(['constructor', '__proto__'])(
+      'GET /api/%s/today should return 400 for an unknown country',
+      async name => {
+        const response = await request(app).get(`/api/${name}/today`).expect(400);
+
+        expect(response.body.message).toContain('Unsupported country');
+      }
+    );
   });
 
   describe('Regression Tests - Timezone and Hour Count Bugs', () => {
