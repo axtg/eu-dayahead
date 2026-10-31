@@ -17,3 +17,5 @@ docker/Dockerfile
 .dockerignore
 tests
 jest.config.js
+tailwind.config.js
+tailwind.input.css

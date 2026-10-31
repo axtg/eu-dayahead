@@ -11,14 +11,13 @@ const POLICY_HEADER = 'Content-Security-Policy';
 const SITE_SOURCES = {
   scripts: [
     'https://plausible.io',
-    'https://cdn.tailwindcss.com',
     'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/' // jsDelivr serves all of npm, so allow only this package
   ],
   connect: ['https://plausible.io']
 };
 
 const SWAGGER_UI = 'https://unpkg.com/swagger-ui-dist@5.9.0/'; // unpkg also serves all of npm
-const DOCS_SOURCES = { scripts: [SWAGGER_UI], styles: [SWAGGER_UI] };
+const DOCS_SOURCES = { scripts: [SWAGGER_UI], styles: ["'unsafe-inline'", SWAGGER_UI] }; // Swagger UI injects styles
 
 // A hash covers a script's exact text. Pages are hashed at startup, so policies stay in step with them.
 function buildContentSecurityPolicy(html, { scripts = [], styles = [], connect = [] } = {}) {
@@ -29,7 +28,7 @@ function buildContentSecurityPolicy(html, { scripts = [], styles = [], connect =
   return [
     "default-src 'self'",
     ["script-src 'self'", ...scripts, ...inlineHashes].join(' '),
-    ["style-src 'self' 'unsafe-inline'", ...styles].join(' '), // Tailwind and Swagger UI inject style elements
+    ["style-src 'self'", ...styles].join(' '),
     "img-src 'self' data:",
     ["connect-src 'self'", ...connect].join(' '),
     "object-src 'none'",

@@ -128,37 +128,12 @@
       plausible.init()
     </script>
 
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                DEFAULT: '#111827' // near black
-              },
-              secondary: {
-                DEFAULT: '#6B7280' // neutral gray
-              },
-              surface: {
-                DEFAULT: '#F9FAFB', // subtle off-white background
-                muted: '#F3F4F6'
-              }
-            },
-            boxShadow: {
-              soft: '0 10px 30px -12px rgba(0,0,0,0.15)'
-            }
-          }
-        }
-      }
-    </script>
-
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <link rel="preload" href="/app.js?v=3" as="script" />
     <link rel="preload" href="/styles.css?v=3" as="style" />
     <link rel="stylesheet" href="/styles.css?v=3" />
+    <link rel="stylesheet" href="/tailwind.css?v=1" />
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <noscript>

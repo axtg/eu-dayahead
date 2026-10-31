@@ -66,6 +66,35 @@ describe('security headers', () => {
     });
   });
 
+  describe('site styles and scripts', () => {
+    test('the page uses compiled Tailwind, not the CDN script', async () => {
+      const { text } = await request(app).get('/');
+
+      expect(text).not.toContain('cdn.tailwindcss.com');
+      expect(text).toMatch(/<link rel="stylesheet" href="\/tailwind\.css/);
+    });
+
+    test('the compiled stylesheet is served', async () => {
+      const { text } = await request(app).get('/tailwind.css').expect(200).expect('Content-Type', /css/);
+
+      expect(text).toContain('.max-w-7xl');
+    });
+
+    test('the policy allows neither the CDN nor inline styles', async () => {
+      const { headers } = await request(app).get('/');
+      const policy = headers['content-security-policy'];
+
+      expect(policy).not.toContain('tailwindcss');
+      expect(directive(policy, 'style-src')).toBe("style-src 'self'");
+    });
+
+    test('Swagger UI keeps inline styles, which it needs', async () => {
+      const { headers } = await request(app).get('/docs');
+
+      expect(directive(headers['content-security-policy'], 'style-src')).toContain("'unsafe-inline'");
+    });
+  });
+
   describe('/docs', () => {
     test.each(['/docs', '/docs/', '/DOCS'])('%s has its own policy for Swagger UI', async url => {
       const { headers, text } = await request(app).get(url);
