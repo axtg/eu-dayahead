@@ -37,6 +37,10 @@ test('vat is optional with no default', () => {
   expect(field('vat')).not.toHaveProperty('default');
 });
 
+test('round_to has no default', () => {
+  expect(field('round_to')).not.toHaveProperty('default');
+});
+
 test('existing options stay', () => {
   expect(optionValues('country')).toEqual(['DE', 'NL']);
   expect(optionValues('timeframe')).toEqual(['next24h', 'today']);

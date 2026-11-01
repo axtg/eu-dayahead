@@ -89,7 +89,6 @@ custom_fields:
   - 4 decimals: '4'
   - 5 decimals: '5'
   description: Number of decimals to round prices to
-  default: '5'
   optional: true
 - keyname: best_period_hours
   name: Best period length
@@ -108,11 +107,11 @@ custom_fields:
   name: Language
   field_type: select
   options:
-  - Use the device language: device
+  - Device language: device
   - English: en
   - Nederlands: nl
   - Deutsch: de
-  - Francais: fr
+  - Français: fr
   - Dansk: da
   - Norsk: nb
   - Svenska: sv
