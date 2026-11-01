@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const { loadSettings, renderPollingUrl, renderLayout } = require('./trmnl/harness');
 
+const SETTINGS_PATH = 'integrations/trmnl-70055-energy_day_ahead_prices/settings.yml';
 const OLD_URL =
   'https://dap.xadi.eu/api/{{ country }}/{{ timeframe }}?interval={{ resolution }}&markup={{ markup }}&vat={{ vat }}';
 
@@ -13,7 +16,7 @@ const optionValues = key =>
     return String(option);
   });
 
-// Four quarter-free hourly points shaped like the API's /today response
+// Five hourly points shaped like the API's /today response
 const fixtureResponse = {
   data: [
     { time: '2026-11-01T00:00:00.000Z', price: 0.1, hour: '01:00', localTime: 'zo 1 nov, 01:00' },
@@ -39,6 +42,22 @@ test('vat is optional with no default', () => {
 
 test('round_to has no default', () => {
   expect(field('round_to')).not.toHaveProperty('default');
+});
+
+test('new select option values are quoted in the raw text', () => {
+  const lines = fs.readFileSync(path.join(__dirname, '..', SETTINGS_PATH), 'utf8').split('\n');
+  for (const key of ['round_to', 'best_period_hours', 'language']) {
+    const start = lines.findIndex(line => line === `- keyname: ${key}`);
+    const optionsAt = lines.indexOf('  options:', start);
+    const values = [];
+    for (let i = optionsAt + 1; lines[i].startsWith('  - '); i++) {
+      values.push(lines[i].slice(lines[i].lastIndexOf(': ') + 2));
+    }
+    expect(values.length).toBeGreaterThan(0);
+    for (const value of values) {
+      expect(value).toMatch(/^'[^']+'$/);
+    }
+  }
 });
 
 test('existing options stay', () => {

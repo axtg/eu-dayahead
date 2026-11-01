@@ -107,16 +107,16 @@ custom_fields:
   name: Language
   field_type: select
   options:
-  - Device language: device
-  - English: en
-  - Nederlands: nl
-  - Deutsch: de
-  - Français: fr
-  - Dansk: da
-  - Norsk: nb
-  - Svenska: sv
+  - Device language: 'device'
+  - English: 'en'
+  - Nederlands: 'nl'
+  - Deutsch: 'de'
+  - Français: 'fr'
+  - Dansk: 'da'
+  - Norsk: 'nb'
+  - Svenska: 'sv'
   description: Language of the labels in the chart
-  default: device
+  default: 'device'
   optional: true
 name: NL Energy Day Ahead Prices
 description:
