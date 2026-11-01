@@ -108,10 +108,10 @@ Option values contain no slash because TRMNL may rewrite select values, and the 
 ### Polling URL
 
 ```liquid
-https://dap.xadi.eu/api/{{ country }}/{% if timeframe == 'next12' %}next/12{% elsif timeframe == 'nextall' %}next/48{% else %}{{ timeframe }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}
+{% assign tf = timeframe | downcase %}https://dap.xadi.eu/api/{{ country }}/{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}
 ```
 
-The timeframe comparison is case-insensitive in the final version; the plan has the exact line.
+The timeframe comparison uses `downcase` because stored select values can be either case.
 
 The API accepts empty `markup`, `variableMarkup`, `roundTo` and `interval` (tested in production). TRMNL documents
 the full Liquid library in polling URLs but shows no `{% if %}` example, so rollout step 1 checks it.
