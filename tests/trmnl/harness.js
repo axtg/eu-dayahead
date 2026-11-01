@@ -66,14 +66,17 @@ function extractInlineScripts(html) {
 }
 
 // instances > 1 repeats the shared code and layout on one page, as a TRMNL mashup does
-async function renderLayout(layoutName, { response, fieldValues, user, mergeOrder, slotHeight, instances = 1 } = {}) {
-  const engine = createEngine();
+function renderHtml(layoutName, { response, fieldValues, user, mergeOrder, instances = 1 } = {}) {
   const variables = buildVariables({ response, fieldValues, user, mergeOrder });
   const read = name => fs.readFileSync(path.join(PLUGIN_DIR, `${name}.liquid`), 'utf8');
-  const html = await engine.parseAndRender(
+  return createEngine().parseAndRender(
     `${`${read('shared')}\n${read(layoutName)}\n`.repeat(instances)}<!--chart_id:{{ chart_id }}-->`,
     variables
   );
+}
+
+async function renderLayout(layoutName, { response, fieldValues, user, mergeOrder, slotHeight, instances = 1 } = {}) {
+  const html = await renderHtml(layoutName, { response, fieldValues, user, mergeOrder, instances });
   const chartId = (html.match(/<!--chart_id:(.*?)-->/) || [])[1] || null;
 
   const ids = new Set([...html.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)].map(m => m[1]));
@@ -118,4 +121,4 @@ async function renderLayout(layoutName, { response, fieldValues, user, mergeOrde
   };
 }
 
-module.exports = { INFO_PANEL_HEIGHT, loadSettings, renderPollingUrl, renderLayout };
+module.exports = { INFO_PANEL_HEIGHT, loadSettings, renderPollingUrl, renderHtml, renderLayout };

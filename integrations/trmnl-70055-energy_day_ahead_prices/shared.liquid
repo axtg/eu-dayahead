@@ -118,16 +118,17 @@
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function bestPeriodPattern() {
+  // Quarter-hour data has bars about 2px wide, where a 10px pattern leaves only scattered dashes
+  function bestPeriodPattern(narrow) {
     return {
       pattern: {
         path: {
-          d: 'M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11',
+          d: narrow ? 'M 0 4 L 4 0 M -1 1 L 1 -1 M 3 5 L 5 3' : 'M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11',
           stroke: '#000000',
-          strokeWidth: 3
+          strokeWidth: narrow ? 2 : 3
         },
-        width: 10,
-        height: 10,
+        width: narrow ? 4 : 10,
+        height: narrow ? 4 : 10,
         opacity: 0.8
       }
     };
@@ -178,7 +179,7 @@
     const points = prices.map(item => {
       const time = new Date(item.time).getTime();
       const isBest = bestPeriod && time >= bestStart && time < bestEnd;
-      return isBest ? { y: item.price, color: bestPeriodPattern() } : { y: item.price };
+      return isBest ? { y: item.price, color: bestPeriodPattern(prices.length > 48) } : { y: item.price };
     });
 
     const title = info.type === 'today'

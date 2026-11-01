@@ -334,6 +334,30 @@ describe.each(LAYOUTS)('layout %s', layout => {
     expect(elements.info.innerHTML).toContain('02:00 - 06:00');
   });
 
+  test('quarter-hour bars get a tighter pattern than hourly ones', async () => {
+    const hourly = fixture('nl-today');
+    hourly.bestPeriod = {
+      hours: 4,
+      startTime: hourly.data[2].time,
+      endTime: hourly.data[6].time,
+      averagePrice: 0.18,
+      intervals: 4
+    };
+    const quarterly = fixture('nl-today-dst-100');
+    const best = {
+      hours: 4,
+      startTime: quarterly.data[8].time,
+      endTime: quarterly.data[24].time,
+      averagePrice: 0.18,
+      intervals: 16
+    };
+    quarterly.bestPeriod = best;
+    const hourlyPattern = (await render(layout, hourly)).chart.series[0].data[2].color.pattern;
+    const quarterlyPattern = (await render(layout, quarterly)).chart.series[0].data[8].color.pattern;
+    expect(quarterlyPattern.width).toBeLessThan(hourlyPattern.width);
+    expect(quarterlyPattern.height).toBeLessThan(hourlyPattern.height);
+  });
+
   test('with no best period nothing is marked and the panel is empty', async () => {
     const { chart, elements } = await render(layout, { ...fixture('nl-next24h'), bestPeriod: null });
     expect(chart.series[0].data.some(point => point.color)).toBe(false);
