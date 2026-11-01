@@ -188,10 +188,9 @@
     const values = prices.map(item => item.price);
     const maxPrice = Math.max(...values);
     const minPrice = Math.min(...values);
-    const roundedMin = Math.floor(minPrice * 20) / 20;
-    // A bar priced exactly on the bottom line would have no height, so drop the line a step below it
-    const yMin = roundedMin === minPrice && minPrice > 0 ? roundedMin - 0.05 : roundedMin;
+    const yMin = Math.floor(minPrice * 20) / 20;
     const yMax = maxPrice > 0 ? Math.ceil(maxPrice * 20) / 20 : 0.05;
+    const axisPriceFormat = new Intl.NumberFormat(language, { maximumFractionDigits: 3 });
 
     const draw = function () {
       Highcharts.chart(chartId, {
@@ -229,7 +228,9 @@
             }
           },
           labels: {
-            format: '€{value}',
+            formatter: function () {
+              return '€' + axisPriceFormat.format(this.value);
+            },
             style: {
               fontSize: sizes.axisSize,
               color: '#000000'

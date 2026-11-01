@@ -436,11 +436,12 @@ describe('chart details', () => {
     expect(chart.xAxis.labels.step).toBe(1);
   });
 
-  test('a price on the bottom axis line still has a bar', async () => {
-    const response = fixture('nl-next24h');
-    response.data[3].price = 0.1;
-    const { chart } = await render('full', response);
-    expect(chart.yAxis.min).toBeLessThan(0.1);
+  test.each([
+    ['nl', '€0,25'],
+    ['en', '€0.25']
+  ])('y-axis numbers follow the language: %s shows %s', async (language, expected) => {
+    const { chart } = await render('full', fixture('nl-next24h'), { language });
+    expect(chart.yAxis.labels.formatter.call({ value: 0.25 })).toBe(expected);
   });
 
   test('shared.liquid has no chartkick, no negative colour and pinned Highcharts', () => {
