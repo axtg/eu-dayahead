@@ -298,6 +298,17 @@ describe('enrichPricesWithCountryInfo hour', () => {
         price
       }));
 
+    test.each([
+      ['repeated', [0, 30, 30, 45]],
+      ['out of order', [0, 30, 15, 45]]
+    ])('skips a window whose ends fit but whose middle slots are %s', (_, offsets) => {
+      const at = minutes => new Date(new Date(START).getTime() + minutes * 60000).toISOString();
+      const prices = offsets.map(minutes => ({ time: at(minutes), price: 1 }));
+      expect(findBestPeriod(prices, 1, 15, 5)).toBeNull();
+      const later = [120, 135, 150, 165].map(minutes => ({ time: at(minutes), price: 2 }));
+      expect(findBestPeriod([...prices, ...later], 1, 15, 5).startTime).toBe(at(120));
+    });
+
     test('finds the cheapest consecutive window', () => {
       const prices = slots('2026-11-02T00:00:00Z', 60, [5, 5, 1, 1, 5, 5]);
       expect(findBestPeriod(prices, 2, 60, 5)).toEqual({

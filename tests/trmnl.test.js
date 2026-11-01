@@ -1,7 +1,7 @@
 const { readFileSync } = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { INFO_PANEL_HEIGHT, loadSettings, renderPollingUrl, renderLayout } = require('./trmnl/harness');
+const { INFO_PANEL_HEIGHT, loadSettings, renderHtml, renderPollingUrl, renderLayout } = require('./trmnl/harness');
 
 const PLUGIN_DIR = path.join(__dirname, '..', 'integrations', 'trmnl-70055-energy_day_ahead_prices');
 const SETTINGS_PATH = path.join(PLUGIN_DIR, 'settings.yml');
@@ -72,8 +72,10 @@ describe('settings', () => {
     expect(field('vat').description).toContain('0.21, not 21');
   });
 
-  test('round_to has no default', () => {
-    expect(field('round_to')).not.toHaveProperty('default');
+  // A saving user must not silently get 2 decimals if TRMNL's form has no blank option
+  test('round_to defaults to 5 decimals, listed first', () => {
+    expect(field('round_to').default).toBe('5');
+    expect(optionValues('round_to')[0]).toBe('5');
   });
 
   test('select option values are quoted in the raw text', () => {
@@ -118,7 +120,7 @@ describe('settings', () => {
   });
 
   test('numeric selects use labelled, quoted values', () => {
-    expect(optionValues('round_to')).toEqual(['2', '3', '4', '5']);
+    expect(optionValues('round_to')).toEqual(['5', '2', '3', '4']);
     expect(optionValues('best_period_hours')).toEqual(['1', '2', '3', '4', '6', '8']);
   });
 
@@ -145,6 +147,10 @@ describe('settings', () => {
 });
 
 describe('polling URL', () => {
+  test('the raw value starts with https://, in case TRMNL validates it as a URL', () => {
+    expect(settings.polling_url.startsWith('https://dap.xadi.eu/api/')).toBe(true);
+  });
+
   test.each([
     [{ vat: 0 }, 'vat=0'],
     [{ vat: '0' }, 'vat=0'],
@@ -520,10 +526,15 @@ describe('chart details', () => {
   });
 
   test('an API message cannot break out of the script or the panel', async () => {
-    const message = "Invalid interval '</script><b>x'. Valid values: 60M, 15M.";
-    const { elements } = await render('full', { status: 'error', message });
-    expect(elements.info.innerHTML).toContain('&lt;/script&gt;&lt;b&gt;x');
+    const message = "Invalid interval '</script><b>x<!--<script'. Valid values: 60M, 15M.";
+    const options = { response: { status: 'error', message }, fieldValues: { language: 'en' }, user: { locale: 'en' } };
+    const { elements } = await render('full', options.response);
+    expect(elements.info.innerHTML).toContain('&lt;/script&gt;&lt;b&gt;x&lt;!--&lt;script');
     expect(elements.info.innerHTML).not.toContain('<b>');
+    const html = await renderHtml('full', options);
+    for (const text of ['</script><b>', '<b>x', '<!--<script']) {
+      expect(html).not.toContain(text);
+    }
   });
 
   test.each([
@@ -534,6 +545,58 @@ describe('chart details', () => {
   ])('round_to %j shows the average as %s', async (roundTo, expected) => {
     const { elements } = await render('full', fixture('nl-today'), { language: 'en', round_to: roundTo });
     expect(elements.info.innerHTML).toMatch(new RegExp(`€${expected.replace('.', '\\.')}\\D`));
+  });
+
+  // Builds a quarter-hour next-N response of the given length from the DST fixture
+  const quarterHours = length => {
+    const response = fixture('nl-today-dst-100');
+    response.data = response.data.slice(0, length);
+    response.info = { ...response.info, type: 'next', totalIntervals: length, totalHours: Math.floor(length / 4) };
+    response.bestPeriod = {
+      hours: 4,
+      startTime: response.data[0].time,
+      endTime: new Date(new Date(response.data[0].time).getTime() + 4 * 3600000).toISOString(),
+      averagePrice: 0.2,
+      intervals: 16
+    };
+    return response;
+  };
+  const patternWidth = chart => chart.series[0].data.find(point => point.color).color.pattern.width;
+
+  test.each([
+    ['all of next12', 48],
+    ['a partial', 20],
+    ['a full day', 96]
+  ])('15M data gets the narrow pattern for %s of %i points', async (_, length) => {
+    const { chart } = await render('full', quarterHours(length));
+    expect(patternWidth(chart)).toBe(4);
+  });
+
+  test('hourly data gets the wide pattern however many points it has', async () => {
+    const response = quarterHours(60);
+    response.info.resolutionMinutes = 60;
+    const { chart } = await render('full', response);
+    expect(patternWidth(chart)).toBe(10);
+  });
+
+  test('a next-N title with no whole hours says 1, not a fraction', async () => {
+    const response = quarterHours(3);
+    response.info.totalHours = 0;
+    response.bestPeriod = null;
+    const { chart } = await render('full', response);
+    expect(chart.title.text).toBe(STRINGS.en.titleNext.replace('{hours}', '1'));
+  });
+
+  test.each([
+    ['en', '-€0.055'],
+    ['nl', '-€0,055'],
+    ['sv', '-€0,055']
+  ])('a negative price in %s reads %s on the info line and the axis', async (language, expected) => {
+    const response = { ...fixture('nl-next24h-negative') };
+    response.bestPeriod = { ...response.bestPeriod, averagePrice: -0.055 };
+    const { chart, elements } = await render('full', response, { language, round_to: '3' });
+    expect(elements.info.innerHTML).toContain(expected);
+    expect(chart.yAxis.labels.formatter.call({ value: -0.055 })).toBe(expected);
   });
 
   test('prices as text use the language decimal separator', async () => {

@@ -10,7 +10,7 @@
       titleToday: 'Power price today ({date})',
       titleNext: 'Power price next {hours}h',
       yAxis: 'Price (EUR/kWh)',
-      bestPeriod: 'Best {hours}-hour period: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Best {hours}-hour period: {start} - {end} (Ø {price})',
       noPrices: 'No prices available',
       warnFallbackSource: 'Prices from a backup source',
       warnStaleData: 'Prices may be out of date',
@@ -21,7 +21,7 @@
       titleToday: 'Stroomprijs vandaag ({date})',
       titleNext: 'Stroomprijs komende {hours}u',
       yAxis: 'Prijs (EUR/kWh)',
-      bestPeriod: 'Beste {hours}-uursperiode: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Beste {hours}-uursperiode: {start} - {end} (Ø {price})',
       noPrices: 'Geen prijzen beschikbaar',
       warnFallbackSource: 'Prijzen van een reservebron',
       warnStaleData: 'Prijzen zijn mogelijk verouderd',
@@ -32,7 +32,7 @@
       titleToday: 'Strompreis heute ({date})',
       titleNext: 'Strompreis nächste {hours} Std.',
       yAxis: 'Preis (EUR/kWh)',
-      bestPeriod: 'Beste {hours}-Stunden-Periode: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Beste {hours}-Stunden-Periode: {start} - {end} (Ø {price})',
       noPrices: 'Keine Preise verfügbar',
       warnFallbackSource: 'Preise aus einer Ersatzquelle',
       warnStaleData: 'Preise sind möglicherweise veraltet',
@@ -43,7 +43,7 @@
       titleToday: 'Prix de l’électricité aujourd’hui ({date})',
       titleNext: 'Prix de l’électricité, {hours} h à venir',
       yAxis: 'Prix (EUR/kWh)',
-      bestPeriod: 'Meilleure période de {hours} h : {start} - {end} (Ø €{price})',
+      bestPeriod: 'Meilleure période de {hours} h : {start} - {end} (Ø {price})',
       noPrices: 'Aucun prix disponible',
       warnFallbackSource: 'Prix issus d’une source de secours',
       warnStaleData: 'Les prix ne sont peut-être pas à jour',
@@ -54,7 +54,7 @@
       titleToday: 'Elpris i dag ({date})',
       titleNext: 'Elpris næste {hours} t',
       yAxis: 'Pris (EUR/kWh)',
-      bestPeriod: 'Bedste periode på {hours} t: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Bedste periode på {hours} t: {start} - {end} (Ø {price})',
       noPrices: 'Ingen priser tilgængelige',
       warnFallbackSource: 'Priser fra en reservekilde',
       warnStaleData: 'Priserne kan være forældede',
@@ -65,7 +65,7 @@
       titleToday: 'Strømpris i dag ({date})',
       titleNext: 'Strømpris neste {hours} t',
       yAxis: 'Pris (EUR/kWh)',
-      bestPeriod: 'Beste periode på {hours} t: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Beste periode på {hours} t: {start} - {end} (Ø {price})',
       noPrices: 'Ingen priser tilgjengelig',
       warnFallbackSource: 'Priser fra en reservekilde',
       warnStaleData: 'Prisene kan være utdaterte',
@@ -76,7 +76,7 @@
       titleToday: 'Elpris i dag ({date})',
       titleNext: 'Elpris närmaste {hours} h',
       yAxis: 'Pris (EUR/kWh)',
-      bestPeriod: 'Bästa perioden på {hours} h: {start} - {end} (Ø €{price})',
+      bestPeriod: 'Bästa perioden på {hours} h: {start} - {end} (Ø {price})',
       noPrices: 'Inga priser tillgängliga',
       warnFallbackSource: 'Priser från en reservkälla',
       warnStaleData: 'Priserna kan vara inaktuella',
@@ -96,8 +96,8 @@
   const info = {{ info | json }} || {};
   const bestPeriod = {{ bestPeriod | json }};
   const warnings = {{ warnings | json }} || [];
-  // The API repeats a rejected value in its message, so it must not be able to close this script
-  const message = {{ message | json | replace: '</', '<"+"/' }};
+  // The API repeats a rejected value in its message, so no < may reach the page as script text
+  const message = {{ message | json | replace: '<', '<"+"' }};
   const languageSetting = {{ trmnl.plugin_settings.custom_fields_values.language | json }};
   const roundToSetting = {{ trmnl.plugin_settings.custom_fields_values.round_to | json }};
   const deviceLocale = {{ trmnl.user.locale | json }};
@@ -116,6 +116,11 @@
 
   function escapeHtml(text) {
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // The sign goes before the euro sign, and is a plain hyphen because some locales format a longer minus
+  function formatEuro(numberFormat, value) {
+    return (value < 0 ? '-' : '') + '€' + numberFormat.format(Math.abs(value));
   }
 
   // Quarter-hour data has bars about 2px wide, where a 10px pattern leaves only scattered dashes
@@ -162,7 +167,7 @@
         hours: bestPeriod.hours,
         start: timeFormat.format(new Date(bestPeriod.startTime)),
         end: timeFormat.format(new Date(bestPeriod.endTime)),
-        price: priceFormat.format(bestPeriod.averagePrice)
+        price: formatEuro(priceFormat, bestPeriod.averagePrice)
       }));
     }
     const notes = warnings.map(warning => strings[WARNING_KEYS[String(warning).split(':')[0].trim()] || 'warnGeneric']);
@@ -179,12 +184,12 @@
     const points = prices.map(item => {
       const time = new Date(item.time).getTime();
       const isBest = bestPeriod && time >= bestStart && time < bestEnd;
-      return isBest ? { y: item.price, color: bestPeriodPattern(prices.length > 48) } : { y: item.price };
+      return isBest ? { y: item.price, color: bestPeriodPattern(info.resolutionMinutes === 15) } : { y: item.price };
     });
 
     const title = info.type === 'today'
       ? fill(strings.titleToday, { date: dateFormat.format(new Date(prices[0].time)) })
-      : fill(strings.titleNext, { hours: info.totalHours || (prices.length * (info.resolutionMinutes || 60)) / 60 });
+      : fill(strings.titleNext, { hours: info.totalHours || Math.max(1, Math.round((prices.length * (info.resolutionMinutes || 60)) / 60)) });
 
     const values = prices.map(item => item.price);
     const maxPrice = Math.max(...values);
@@ -230,7 +235,7 @@
           },
           labels: {
             formatter: function () {
-              return '€' + axisPriceFormat.format(this.value);
+              return formatEuro(axisPriceFormat, this.value);
             },
             style: {
               fontSize: sizes.axisSize,

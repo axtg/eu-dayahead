@@ -67,7 +67,7 @@ These count as failure even if the plugin otherwise works:
 | `markup` | number | | `0` | EUR/kWh. Help text: "0.12 = 12 cents". Step 0.001 |
 | `variable_markup` | number, optional | | blank | Percent. API: -100 to 1000 |
 | `vat` | number, optional | | blank | Blank = the country's rate. 0.21 = 21%. Help text must say both |
-| `round_to` | select, optional | labelled: 2, 3, 4, 5 decimals (`'2'` etc.) | blank | Blank = API default of 5 |
+| `round_to` | select, optional | labelled: 5, 2, 3, 4 decimals (`'5'` etc.), 5 first | `5` | Same as the API default. If TRMNL's form has no blank option for an optional select, a user saving their settings would otherwise silently get 2 decimals. A stored blank still means 5 |
 | `best_period_hours` | select, optional | labelled: 1, 2, 3, 4, 6, 8 hours (`'4'` etc.) | `4` | Blank = 4, today's behaviour |
 | `language` | select, optional | Device language (`device`), English (`en`), Nederlands (`nl`), Deutsch (`de`), Français (`fr`), Dansk (`da`), Norsk (`nb`), Svenska (`sv`) | `device` | |
 
@@ -108,7 +108,7 @@ Option values contain no slash because TRMNL may rewrite select values, and the 
 ### Polling URL
 
 ```liquid
-{% assign tf = timeframe | downcase %}https://dap.xadi.eu/api/{{ country }}/{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}
+https://dap.xadi.eu/api/{{ country }}/{% assign tf = timeframe | downcase %}{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}
 ```
 
 The timeframe comparison uses `downcase` because stored select values can be either case.

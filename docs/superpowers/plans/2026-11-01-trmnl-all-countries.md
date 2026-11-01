@@ -375,7 +375,7 @@ Expected: FAIL on the new URL, the options and every render assertion.
 - Polling URL, exactly this line. It must be double-quoted because `default: 4` contains a colon and space, and single quotes would collide with `vat == ''`:
 
 ```yaml
-polling_url: "{% assign tf = timeframe | downcase %}https://dap.xadi.eu/api/{{ country }}/{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}"
+polling_url: "https://dap.xadi.eu/api/{{ country }}/{% assign tf = timeframe | downcase %}{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}"
 ```
 
 - All 9 countries, labelled by name with quoted lower-case values, NL first: `- Netherlands: 'nl'`, `- Norway: 'no'`, with `default: 'nl'`. Keep `resolution` as plain options.
@@ -452,9 +452,10 @@ Expected: all pass. `tests/api.test.js` depends on Stekker being reachable; repo
 
 ```bash
 cd integrations/trmnl-70055-energy_day_ahead_prices
-git archive --format=zip -o <scratchpad>/trmnl-step1-settings-only.zip <Task 3 SHA> .
 git archive --format=zip -o <scratchpad>/trmnl-step2-full.zip HEAD .
 ```
+
+`trmnl-step1-settings-only.zip` is a5930fc plus one change, because that commit predates the `round_to` default: `git archive a5930fc` into a temporary directory, change only `round_to` in its `settings.yml` (`default: '5'`, 5 decimals first), and zip those 6 files at the top level. The polling URL and `.liquid` files stay identical to a5930fc.
 
 Run: `unzip -l <scratchpad>/trmnl-step2-full.zip`
 Expected: `settings.yml`, `shared.liquid` and 4 layouts at the top level, and no `Zone.Identifier` files.
@@ -468,8 +469,8 @@ Report the branch, the two ZIP paths, what was and wasn't checked, and the rollo
 From the spec's Rollout section. The clone in step 2 needs the API change live.
 
 1. Merge the API change, then confirm: `curl 'https://dap.xadi.eu/api/nl/next24h?bestPeriodHours=4'` returns `bestPeriod`.
-2. Export the current master. `settings.yml` contains `id: 70055`, so confirm importing as a clone can't overwrite the master. Import `trmnl-step2-full.zip` as a clone. Use Parse and a real fetch for each timeframe, including `next/12` and `next/48`, and for **Norway**, which must request `/api/no/...`, not `/api/false/...`. Check `{% if %}` and the `json` filter work. Preview the original device first, then TRMNL X and a Kindle. Stop if conditionals don't work in the polling URL. TRMNL's `POST /api/markup` renders with its real filters, and `GET /api/plugin_settings/{id}/merge_variables` may answer whether `country` comes from the form or the response.
-3. If TRMNL allows it, test an unlisted copy with its own install, as in the spec. **Check the form:** with an install holding `nl`, apply the full version, open the settings, confirm the Netherlands is pre-selected, save, and confirm the URL is unchanged. Repeat with `NL` if you can create one. If the wrong country shows, stop before step 7: anyone saving their settings would change country.
+2. Export the current master. `settings.yml` contains `id: 70055`, so confirm importing as a clone can't overwrite the master. Import `trmnl-step2-full.zip` as a clone. Use Parse and a real fetch for each timeframe, including `next/12` and `next/48`, and for **Norway**, which must request `/api/no/...`, not `/api/false/...`. Check `{% if %}` and the `json` filter work. **Check saving:** on a fresh install of the clone, don't touch Decimals or Language, save, and confirm `roundTo=5`, `language` stays `device`, and nothing else moved. Preview the original device first, then TRMNL X and a Kindle. Stop if conditionals don't work in the polling URL. TRMNL's `POST /api/markup` renders with its real filters, and `GET /api/plugin_settings/{id}/merge_variables` may answer whether `country` comes from the form or the response.
+3. If TRMNL allows it, test an unlisted copy with its own install, as in the spec. **Check the form:** with an install holding `nl`, apply the full version, open the settings, confirm every select pre-selects its stored value, not only country (logs show `60m` stored against plain `60M` options), save, and confirm the URL is unchanged. Repeat with `NL` if you can create one. If a select shows the wrong value, stop before step 7: anyone saving their settings would change it.
 4. Re-run the baseline log query. Install test instances with `vat` at 0, at 0.21 and at its default.
 5. Import `trmnl-step1-settings-only.zip` into the master.
 6. After at least one refresh cycle, compare the logs against the baseline and read the test instances' values. Stop if any `vat=` is now blank.

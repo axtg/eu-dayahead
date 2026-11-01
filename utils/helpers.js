@@ -194,18 +194,22 @@ function parseIntervalOption(query) {
   return normalised;
 }
 
-// Cheapest run of consecutive slots covering the requested hours. Slots must be exactly one
-// resolution apart, so a gap in the data never counts as part of a window. The earliest window wins
+// Cheapest run of consecutive slots covering the requested hours. Each slot must be exactly one
+// resolution after the one before it, so a gap in the data never counts as part of a window. The earliest window wins
 // a tie; the epsilon absorbs floating-point drift between averages.
 function findBestPeriod(prices, hours, resolutionMinutes, roundTo) {
   const slotCount = (hours * 60) / resolutionMinutes;
-  const spanMs = (slotCount - 1) * resolutionMinutes * 60000;
+  const stepMs = resolutionMinutes * 60000;
   const times = prices.map(p => new Date(p.time).getTime());
   let best = null;
   for (let i = 0; i + slotCount <= prices.length; i++) {
-    if (times[i + slotCount - 1] - times[i] !== spanMs) continue;
-    let sum = 0;
-    for (let j = i; j < i + slotCount; j++) sum += prices[j].price;
+    let sum = prices[i].price;
+    let consecutive = true;
+    for (let j = i + 1; j < i + slotCount && consecutive; j++) {
+      consecutive = times[j] - times[j - 1] === stepMs;
+      sum += prices[j].price;
+    }
+    if (!consecutive) continue;
     const average = sum / slotCount;
     if (best === null || average < best.average - 1e-9) best = { index: i, average };
   }
@@ -214,7 +218,7 @@ function findBestPeriod(prices, hours, resolutionMinutes, roundTo) {
   return {
     hours,
     startTime: new Date(times[best.index]).toISOString(),
-    endTime: new Date(times[best.index + slotCount - 1] + resolutionMinutes * 60000).toISOString(),
+    endTime: new Date(times[best.index + slotCount - 1] + stepMs).toISOString(),
     averagePrice: Math.round(best.average * factor) / factor,
     intervals: slotCount
   };
