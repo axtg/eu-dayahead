@@ -130,10 +130,10 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-    <link rel="preload" href="/app.js?v=3" as="script" />
+    <link rel="preload" href="/app.js?v=4" as="script" />
     <link rel="preload" href="/styles.css?v=3" as="style" />
     <link rel="stylesheet" href="/styles.css?v=3" />
-    <link rel="stylesheet" href="/tailwind.css?v=1" />
+    <link rel="stylesheet" href="/tailwind.css?v=2" />
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <noscript>
@@ -169,6 +169,12 @@
                 <path d="M8.5 6l-3.5 6 3.5 6h2l-3.5-6 3.5-6h-2zm7 0l3.5 6-3.5 6h-2l3.5-6-3.5-6h2z"/>
               </svg>
               <span class="hidden sm:inline">API</span>
+            </button>
+            <button id="integrationsBtn" type="button" aria-label="Integrations" class="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v6H4zM17 15v6M14 18h6"/>
+              </svg>
+              <span class="hidden sm:inline">Integrations</span>
             </button>
             <button id="aboutBtn" type="button" class="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors" title="About this project">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -361,10 +367,7 @@
             </ul>
 
             <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Integrations</h3>
-            <ul class="list-disc list-inside space-y-1 text-sm">
-              <li><a href="https://trmnl.com/recipes/nl-energy-day-ahead-prices-70055?via=integrations" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">TRMNL</a>: Dutch day-ahead prices on an e-ink display</li>
-            </ul>
-            <p class="text-sm">Built something with this API? Email <a href="mailto:dap@xadi.eu" class="text-blue-600 hover:text-blue-800">dap@xadi.eu</a> to get it listed here.</p>
+            <p class="text-sm">Use these prices in your calendar or on an e-ink display. See <a href="#integrations" class="text-blue-600 hover:text-blue-800">Integrations</a> for how.</p>
 
             <h3 class="text-lg font-medium text-gray-900 mt-6 mb-3">Data and API</h3>
             <p class="text-sm">Prices come from the ENTSOE Transparency Platform, with Stekker.app as a fallback. Prices for the next day usually appear after about 14:30 CET. The "API" button has the documentation, rate limits and usage terms.</p>
@@ -380,6 +383,62 @@
     </div>
 
     <!-- API Modal -->
+    <div id="integrationsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl sm:text-2xl font-semibold text-gray-900">Use these prices elsewhere</h2>
+            <button id="closeIntegrationsModal" type="button" aria-label="Close" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-4 text-gray-700">
+            <section class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-1">Calendar feed</h3>
+              <p class="text-sm mb-3">Get each day's cheapest window as an event in your calendar. Tomorrow's appears once its prices are published, around 14:30 CET.</p>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                <label class="block">
+                  <span class="block text-xs text-gray-600 mb-1.5">Window length</span>
+                  <select id="calendarHours" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black"></select>
+                </label>
+                <label class="block">
+                  <span class="block text-xs text-gray-600 mb-1.5">Not before</span>
+                  <select id="calendarFrom" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black"></select>
+                </label>
+                <label class="block">
+                  <span class="block text-xs text-gray-600 mb-1.5">Finished by</span>
+                  <select id="calendarTo" class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-black"></select>
+                </label>
+              </div>
+              <p id="calendarSettings" class="text-xs text-gray-600 mb-3"></p>
+              <div class="flex flex-wrap items-center gap-2">
+                <a id="calendarSubscribe" href="#" class="inline-flex items-center px-3 py-2 text-sm rounded-md bg-black text-white hover:bg-gray-800">Subscribe</a>
+                <button id="calendarCopy" type="button" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-md">Copy link</button>
+              </div>
+              <p class="text-xs text-gray-600 mt-3">Calendar apps decide how often they reload a feed, and Google Calendar can take a day. On Android, <a href="https://icsx5.bitfire.at/" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">ICSx⁵</a> lets you set the interval.</p>
+            </section>
+
+            <section class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-1">TRMNL</h3>
+              <p class="text-sm mb-3">Show prices on a TRMNL e-ink display: a bar chart with the cheapest period marked, so you can see at a glance when to run things.</p>
+              <ul class="list-disc list-inside space-y-1 text-sm mb-3">
+                <li>The Netherlands or Germany, with labels in Dutch</li>
+                <li>Today or the next 24 hours, hourly or per 15 minutes</li>
+                <li>Your own markup and VAT included</li>
+                <li>All four TRMNL layouts, from full screen to a quarter of it</li>
+              </ul>
+              <a href="https://trmnl.com/recipes/nl-energy-day-ahead-prices-70055?via=integrations" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-md">Get the recipe</a>
+            </section>
+
+            <p class="text-sm">Building your own? The <a href="/docs" class="text-blue-600 hover:text-blue-800">API documentation</a> has everything you need, and we can list it here: email <a href="mailto:dap@xadi.eu" class="text-blue-600 hover:text-blue-800">dap@xadi.eu</a>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="apiModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
       <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
@@ -421,6 +480,10 @@
               <div class="bg-gray-50 rounded-lg p-3">
                 <div class="font-mono text-blue-600 mb-1">GET /api/{country}/next24h</div>
                 <div class="text-gray-600">Next 24 hours from now</div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3">
+                <div class="font-mono text-blue-600 mb-1">GET /api/{country}/calendar.ics</div>
+                <div class="text-gray-600">Cheapest window per day as a calendar feed (<span class="font-mono">hours</span>, <span class="font-mono">from</span>, <span class="font-mono">to</span>)</div>
               </div>
             </div>
 
@@ -515,7 +578,7 @@
       </div>
     </div>
 
-    <script src="/app.js?v=3" defer></script>
+    <script src="/app.js?v=4" defer></script>
   </body>
 </html>
 
