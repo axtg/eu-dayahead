@@ -127,6 +127,7 @@ paths:
         - $ref: '#/components/parameters/AutoVAT'
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
+        - $ref: '#/components/parameters/BestPeriodHours'
       responses:
         '200':
           description: Today's energy prices
@@ -156,6 +157,7 @@ paths:
         - $ref: '#/components/parameters/AutoVAT'
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
+        - $ref: '#/components/parameters/BestPeriodHours'
       responses:
         '200':
           description: Next 24 hours of energy prices
@@ -194,6 +196,7 @@ paths:
         - $ref: '#/components/parameters/AutoVAT'
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
+        - $ref: '#/components/parameters/BestPeriodHours'
       responses:
         '200':
           description: Energy prices for the requested hours
@@ -343,6 +346,16 @@ components:
         default: 5
         example: 5
 
+    BestPeriodHours:
+      name: bestPeriodHours
+      in: query
+      description: Adds `bestPeriod` to the response, the cheapest run of this many consecutive hours within `data`. `bestPeriod` is null when `data` holds no such run. Omitted without this parameter.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 24
+        example: 4
+
     Interval:
       name: interval
       in: query
@@ -426,6 +439,27 @@ components:
           format: date-time
         info:
           $ref: '#/components/schemas/ResponseInfo'
+        bestPeriod:
+          type: object
+          nullable: true
+          description: Present only when `bestPeriodHours` is given. The cheapest consecutive period within `data`, or null if none fits. The earliest wins a tie.
+          properties:
+            hours:
+              type: integer
+              example: 4
+            startTime:
+              type: string
+              format: date-time
+            endTime:
+              type: string
+              format: date-time
+            averagePrice:
+              type: number
+              example: 0.08213
+            intervals:
+              type: integer
+              description: Number of price entries in the period
+              example: 4
         warnings:
           type: array
           description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
@@ -452,6 +486,27 @@ components:
           format: date-time
         info:
           $ref: '#/components/schemas/ExtendedResponseInfo'
+        bestPeriod:
+          type: object
+          nullable: true
+          description: Present only when `bestPeriodHours` is given. The cheapest consecutive period within `data`, or null if none fits. The earliest wins a tie.
+          properties:
+            hours:
+              type: integer
+              example: 4
+            startTime:
+              type: string
+              format: date-time
+            endTime:
+              type: string
+              format: date-time
+            averagePrice:
+              type: number
+              example: 0.08213
+            intervals:
+              type: integer
+              description: Number of price entries in the period
+              example: 4
         warnings:
           type: array
           description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
