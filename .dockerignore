@@ -16,6 +16,7 @@ docker-compose.yml
 docker/Dockerfile
 .dockerignore
 tests
+integrations
 jest.config.js
 tailwind.config.js
 tailwind.input.css

@@ -1,0 +1,79 @@
+---
+strategy: polling
+no_screen_padding: 'yes'
+dark_mode: 'no'
+static_data: ''
+polling_verb: get
+framework_version: 2.3.7
+serverless_language: ''
+refresh_interval_floor:
+polling_url: https://dap.xadi.eu/api/{{ country }}/{{ timeframe }}?interval={{ resolution }}&markup={{ markup }}&vat={{ vat }}
+polling_headers: ''
+polling_body: ''
+id: 70055
+oauth_enabled: 'false'
+oauth_pkce_enabled: 'no'
+oauth_authorize_url: ''
+oauth_token_url: ''
+oauth_scopes: ''
+oauth_scope_separator: ''
+oauth_refresh_url: ''
+oauth_auth_params: ''
+oauth_token_headers: ''
+oauth_token_site: ''
+oauth_token_params: ''
+oauth_token_request_auth_method: ''
+oauth_body_format: ''
+oauth_token_response_metadata: ''
+oauth_authorization_method: ''
+oauth_refresh_params: ''
+oauth_token_field_name: ''
+oauth_expiry_field_name: ''
+oauth_expiry_strategy: ''
+oauth_fixed_expiry_ms: ''
+custom_fields:
+- keyname: xadi.eu
+  name: About this plugin
+  field_type: author_bio
+  description: NL Energy Day Ahead Prices was created by Xander (@axtg).
+  github_url: https://github.com/axtg/eu-dayahead/
+  learn_more_url: https://dap.xadi.eu/docs
+- keyname: timeframe
+  name: Timeframe
+  field_type: select
+  options:
+  - next24h
+  - today
+  description: Show energy prices for today (until midnight) or the next 24hrs (available from ~14hr).
+  default: next24h
+- keyname: country
+  name: Country
+  field_type: select
+  options:
+  - DE
+  - NL
+  description: Country of which to show the energy prices
+  default: NL
+- keyname: resolution
+  name: Data resolution
+  field_type: select
+  options:
+  - 15M
+  - 60M
+  description: Plot data at an hourly (60M) or 15 minute (15M) resolution
+  default: 60M
+- keyname: markup
+  name: Provider markup
+  field_type: number
+  description: Markup to add on top of spot/ market price, in cents/kWh (e.g. 0.12)
+  step: 0.01
+  default: 0
+- keyname: vat
+  name: VAT
+  field_type: number
+  step: 0.01
+  description: Added tax as percentage of base price (e.g. 0.21 for 21%)
+  default: 0
+name: NL Energy Day Ahead Prices
+description:
+refresh_interval: 120

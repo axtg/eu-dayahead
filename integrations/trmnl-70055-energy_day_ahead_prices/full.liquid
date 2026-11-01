@@ -1,0 +1,182 @@
+<div id="info-panel" style="width: 100%; text-align: center; margin-top: 10px; font-size: 16px; font-weight: bold;"></div>
+<script type="text/javascript">
+  (function() {
+    // Initialize an array to hold formatted data
+    let formattedData = [];
+    // Arrays to hold raw data for analysis
+    let rawPrices = [];
+    let rawTimes = [];
+    // Declare variables outside of the loop
+    let priceValue, timeLabel, hourValue;
+
+    // Get today's date for the title
+    let currentDate = "";
+
+    // Loop through data using Liquid templating
+    {% for item in data %}
+    // Extract the date part for the title (only from the first item)
+    if (currentDate === "") {
+      // Extract date from localTime (e.g., "do 22 mei, 18:00")
+      const localTimeParts = "{{ item.localTime }}".split(', ')[0]; // "do 22 mei"
+      const dateParts = localTimeParts.split(' '); // ["do", "22", "mei"]
+      if (dateParts.length >= 3) {
+        currentDate = dateParts[1] + " " + dateParts[2]; // "22 mei"
+      }
+    }
+
+    // Use the price field (already in EUR/kWh)
+    priceValue = parseFloat("{{ item.price }}");
+    // Use the hour field for time label
+    timeLabel = "{{ item.hour }}";
+    // Extract hour as integer for analysis
+    hourValue = parseInt(timeLabel.split(':')[0], 10);
+
+    // Store raw data for analysis
+    rawPrices.push(priceValue);
+    rawTimes.push(hourValue);
+
+    // Push to formatted data - we'll set colors later
+    formattedData.push({
+      name: timeLabel,
+      y: priceValue,
+      hour: hourValue
+    });
+    {% endfor %}
+
+    // Find 4 consecutive hours with lowest average price
+    let lowestAvgPrice = Infinity;
+    let lowestStartIndex = 0;
+
+    for (let i = 0; i <= rawPrices.length - 4; i++) {
+      const fourHourAvg = (
+        rawPrices[i] + 
+        rawPrices[i+1] + 
+        rawPrices[i+2] + 
+        rawPrices[i+3]
+      ) / 4;
+
+      if (fourHourAvg < lowestAvgPrice) {
+        lowestAvgPrice = fourHourAvg;
+        lowestStartIndex = i;
+      }
+    }
+
+    // Mark the lowest 4-hour period
+    for (let i = lowestStartIndex; i < lowestStartIndex + 4; i++) {
+      if (formattedData[i]) {
+        formattedData[i].color = {
+          pattern: {
+            path: {
+              d: 'M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11', // Diagonal lines
+              stroke: '#000000',
+              strokeWidth: 3
+            },
+            width: 10,
+            height: 10,
+            opacity: 0.8
+          }
+        };
+      }
+    }
+
+    // Calculate dynamic min/max values for the Y-axis
+    const maxPrice = Math.max(...rawPrices);
+    const minPrice = Math.min(...rawPrices);
+
+    // Handle negative prices properly
+    const dynamicMax = maxPrice > 0 ? Math.ceil(maxPrice * 20) / 20 : 0.05;
+    const dynamicMin = minPrice < 0 ? Math.floor(minPrice * 20) / 20 : Math.floor(minPrice * 20) / 20;
+
+    // Create the Chart using Highcharts directly for more control
+    const createChart = function() {
+      Highcharts.chart('chart-123', {
+        chart: {
+          type: 'column',
+          height: 400 // Differs per view
+        },
+        title: {
+          text: 'Stroomprijs volgende 24u (' + currentDate + ')',
+          style: {
+            fontSize: '18px', // Differs per view
+            fontWeight: 'bold',
+            color: '#000000'
+          }
+        },
+        xAxis: {
+          categories: formattedData.map(item => item.name),
+          labels: {
+            rotation: -45,
+            style: {
+              fontSize: '13px', 
+              color: '#000000'
+            }
+          }
+        },
+        yAxis: {
+          min: dynamicMin,
+          max: dynamicMax,
+          tickInterval: 0.02,
+          title: {
+            text: 'Prijs (EUR/kWh)',
+            style: {
+              color: '#000000'
+            }
+          },
+          labels: {
+            format: '€{value}',
+            style: {
+              fontSize: '13px',
+              color: '#000000'
+            }
+          },
+          // Add a zero line for better visualization of negative prices
+          plotLines: [{
+            value: 0,
+            width: 1,
+            color: '#808080'
+          }]
+        },
+        tooltip: {
+          formatter: function() {
+            return `<b>${this.x}</b><br>Prijs: €${this.y.toFixed(5)}`;
+          }
+        },
+        series: [{
+          name: 'Stroomprijs',
+          data: formattedData,
+          color: '#000000',
+          animation: false
+        }],
+        credits: {
+          enabled: false
+        },
+        legend: {
+          enabled: false
+        },
+        plotOptions: {
+          column: {
+            borderWidth: 0,
+            // Color negative values differently
+            negativeColor: '#ff4444'
+          }
+        }
+      });
+
+      // Update info panel with best hours information
+      if (formattedData.length >= 4) {
+        const bestHoursStart = formattedData[lowestStartIndex].name;
+        const bestHoursEnd = formattedData[lowestStartIndex + 3].name;
+        const avgPrice = lowestAvgPrice.toFixed(5);
+        const infoPanel = document.getElementById('info-panel');
+        infoPanel.innerHTML = `Beste 4-uur periode: ${bestHoursStart} - ${bestHoursEnd} (Ø €${avgPrice})`;
+      }
+    };
+
+    // Check and load chart
+    if (typeof Highcharts !== 'undefined') {
+      createChart();
+    } else {
+      window.addEventListener('load', createChart);
+    }
+  })();
+</script>
