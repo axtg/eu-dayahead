@@ -6,6 +6,8 @@ const { Liquid } = require('liquidjs');
 
 const PLUGIN_DIR = path.join(__dirname, '..', '..', 'integrations', 'trmnl-70055-energy_day_ahead_prices');
 const RANDOM_SUFFIX = '-test';
+// What a filled info panel measures; an empty one measures 0, so reading it before filling it shows up in the height
+const INFO_PANEL_HEIGHT = 24;
 
 function loadSettings() {
   return yaml.load(fs.readFileSync(path.join(PLUGIN_DIR, 'settings.yml'), 'utf8'));
@@ -43,9 +45,11 @@ function createElement(id, slotHeight) {
     id,
     innerHTML: '',
     style: {},
-    clientHeight: slotHeight || 0,
-    offsetHeight: slotHeight || 0,
-    closest: () => slot
+    clientHeight: 0,
+    get offsetHeight() {
+      return this.innerHTML ? INFO_PANEL_HEIGHT : 0;
+    },
+    closest: selector => (selector === '.view' ? slot : null)
   };
 }
 
@@ -61,15 +65,15 @@ function extractInlineScripts(html) {
   return scripts;
 }
 
-async function renderLayout(layoutName, { response, fieldValues, user, mergeOrder, slotHeight } = {}) {
+// instances > 1 repeats the shared code and layout on one page, as a TRMNL mashup does
+async function renderLayout(layoutName, { response, fieldValues, user, mergeOrder, slotHeight, instances = 1 } = {}) {
   const engine = createEngine();
   const variables = buildVariables({ response, fieldValues, user, mergeOrder });
   const read = name => fs.readFileSync(path.join(PLUGIN_DIR, `${name}.liquid`), 'utf8');
   const html = await engine.parseAndRender(
-    `${read('shared')}\n${read(layoutName)}\n<!--chart_id:{{ chart_id }}-->`,
+    `${`${read('shared')}\n${read(layoutName)}\n`.repeat(instances)}<!--chart_id:{{ chart_id }}-->`,
     variables
   );
-  // A layout that assigns chart_id names its chart and info elements after it; the current layouts don't
   const chartId = (html.match(/<!--chart_id:(.*?)-->/) || [])[1] || null;
 
   const ids = new Set([...html.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)].map(m => m[1]));
@@ -114,4 +118,4 @@ async function renderLayout(layoutName, { response, fieldValues, user, mergeOrde
   };
 }
 
-module.exports = { loadSettings, renderPollingUrl, renderLayout };
+module.exports = { INFO_PANEL_HEIGHT, loadSettings, renderPollingUrl, renderLayout };

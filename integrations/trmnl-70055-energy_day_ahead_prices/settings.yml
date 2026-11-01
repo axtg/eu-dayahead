@@ -7,7 +7,7 @@ polling_verb: get
 framework_version: 2.3.7
 serverless_language: ''
 refresh_interval_floor:
-polling_url: https://dap.xadi.eu/api/{{ country }}/{{ timeframe }}?interval={{ resolution }}&markup={{ markup }}&vat={{ vat }}
+polling_url: "{% assign tf = timeframe | downcase %}https://dap.xadi.eu/api/{{ country }}/{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}"
 polling_headers: ''
 polling_body: ''
 id: 70055
@@ -35,38 +35,47 @@ custom_fields:
 - keyname: xadi.eu
   name: About this plugin
   field_type: author_bio
-  description: NL Energy Day Ahead Prices was created by Xander (@axtg).
+  description: EU Energy Day Ahead Prices was created by Xander (@axtg).
   github_url: https://github.com/axtg/eu-dayahead/
   learn_more_url: https://dap.xadi.eu/docs
 - keyname: timeframe
   name: Timeframe
   field_type: select
   options:
-  - next24h
-  - today
-  description: Show energy prices for today (until midnight) or the next 24hrs (available from ~14hr).
-  default: next24h
+  - Today: 'today'
+  - Next 12 hours: 'next12'
+  - Next 24 hours: 'next24h'
+  - All published prices: 'nextall'
+  description: Period to show. Tomorrow's prices are published from about 14:00, so before that the next hours can be fewer than chosen.
+  default: 'next24h'
 - keyname: country
   name: Country
   field_type: select
   options:
-  - DE
-  - NL
+  - Netherlands: 'nl'
+  - Austria: 'at'
+  - Belgium: 'be'
+  - Denmark: 'dk'
+  - France: 'fr'
+  - Germany: 'de'
+  - Norway: 'no'
+  - Sweden: 'se'
+  - Switzerland: 'ch'
   description: Country of which to show the energy prices
-  default: NL
+  default: 'nl'
 - keyname: resolution
   name: Data resolution
   field_type: select
   options:
   - 15M
   - 60M
-  description: Plot data at an hourly (60M) or 15 minute (15M) resolution
+  description: Plot data at an hourly (60M) or 15 minute (15M) resolution. Switzerland is always hourly.
   default: 60M
 - keyname: markup
   name: Provider markup
   field_type: number
   description: Markup to add on top of the spot/ market price, in EUR/kWh (0.12 = 12 cents)
-  step: 0.01
+  step: 0.001
   default: 0
 - keyname: variable_markup
   name: Variable markup
@@ -78,7 +87,7 @@ custom_fields:
   name: VAT
   field_type: number
   step: 0.001
-  description: Added tax as percentage of base price (e.g. 0.21 for 21%)
+  description: 'Added tax as a decimal: 0.21, not 21. Leave blank to use the country''s rate.'
   optional: true
 - keyname: round_to
   name: Decimals
@@ -118,6 +127,6 @@ custom_fields:
   description: Language of the labels in the chart
   default: 'device'
   optional: true
-name: NL Energy Day Ahead Prices
+name: EU Energy Day Ahead Prices
 description:
 refresh_interval: 120
