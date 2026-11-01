@@ -139,6 +139,19 @@ curl http://localhost:3000/api/countries
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
 | `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
 | `GET /api/{country}/next/{hours}` | Next 1-48 hours from now    | `/api/fr/next/6`   |
+| `GET /api/{country}/calendar.ics` | Cheapest window per day, as a calendar feed | `/api/nl/calendar.ics?hours=4&from=7&to=22` |
+
+### 📅 Calendar feed
+
+Subscribe to `/api/{country}/calendar.ics` to get one event a day for the cheapest continuous window: today's, plus tomorrow's once its prices are published (about 14:30 CET).
+
+| Parameter | Meaning | Default |
+| --------- | ------- | ------- |
+| `hours` | Window length in whole hours, 1-24 | `4` |
+| `from`, `to` | Local hours the window must lie within, 0-24 | `0`, `24` |
+| `markup`, `variableMarkup`, `vat` | Same as other endpoints, and included in the average shown | none |
+
+Windows use quarter-hour prices where the zone publishes them, and can't cross midnight. Calendar apps decide how often they reload a feed. Google Calendar can take a day, so on Android an app like ICSx⁵ with a set sync interval works better.
 
 ### 🏢 Energy provider presets
 
