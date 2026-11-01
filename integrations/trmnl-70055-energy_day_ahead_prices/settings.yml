@@ -65,15 +65,60 @@ custom_fields:
 - keyname: markup
   name: Provider markup
   field_type: number
-  description: Markup to add on top of spot/ market price, in cents/kWh (e.g. 0.12)
+  description: Markup to add on top of the spot/ market price, in EUR/kWh (0.12 = 12 cents)
   step: 0.01
   default: 0
+- keyname: variable_markup
+  name: Variable markup
+  field_type: number
+  description: Percentage markup on top of the spot/ market price (e.g. 10 for 10%)
+  step: 0.01
+  optional: true
 - keyname: vat
   name: VAT
   field_type: number
-  step: 0.01
+  step: 0.001
   description: Added tax as percentage of base price (e.g. 0.21 for 21%)
-  default: 0
+  optional: true
+- keyname: round_to
+  name: Decimals
+  field_type: select
+  options:
+  - 2 decimals: '2'
+  - 3 decimals: '3'
+  - 4 decimals: '4'
+  - 5 decimals: '5'
+  description: Number of decimals to round prices to
+  default: '5'
+  optional: true
+- keyname: best_period_hours
+  name: Best period length
+  field_type: select
+  options:
+  - 1 hour: '1'
+  - 2 hours: '2'
+  - 3 hours: '3'
+  - 4 hours: '4'
+  - 6 hours: '6'
+  - 8 hours: '8'
+  description: Length of the cheapest period to highlight
+  default: '4'
+  optional: true
+- keyname: language
+  name: Language
+  field_type: select
+  options:
+  - Use the device language: device
+  - English: en
+  - Nederlands: nl
+  - Deutsch: de
+  - Francais: fr
+  - Dansk: da
+  - Norsk: nb
+  - Svenska: sv
+  description: Language of the labels in the chart
+  default: device
+  optional: true
 name: NL Energy Day Ahead Prices
 description:
 refresh_interval: 120
