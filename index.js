@@ -119,6 +119,7 @@ if (require.main === module) {
     console.log('\n🎯 ENDPOINTS:');
     console.log('  GET /api/countries - List all supported countries');
     console.log("  GET /api/{country}/today - Today's prices for country");
+    console.log("  GET /api/{country}/tomorrow - Tomorrow's prices for country, once published");
     console.log('  GET /api/{country}/next24h - Next 24 hours for country');
     console.log('  GET /api/{country}/next/{hours} - Next 1-48 hours for country');
     console.log('  GET /api/providers - List provider presets');

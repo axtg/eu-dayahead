@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { fromZonedTime, toZonedTime } = require('date-fns-tz');
-const { startOfHour, addHours, startOfDay, endOfDay } = require('date-fns');
+const { startOfHour, addHours, addDays, startOfDay, endOfDay } = require('date-fns');
 
 const { COUNTRIES } = require('../config/countries');
 const {
@@ -44,42 +44,52 @@ function bestPeriodFor(prices, bestPeriodHours, result, markupOptions) {
   return findBestPeriod(prices, bestPeriodHours, result.resolutionMinutes, markupOptions.roundTo);
 }
 
-router.get('/:country/today', async (req, res, next) => {
-  try {
-    const countryCode = requireCountry(req);
+// A whole local day, dayOffset days from today. Going through wall-clock time keeps 23- and 25-hour days correct.
+async function sendLocalDay(req, res, dayOffset, type) {
+  const countryCode = requireCountry(req);
 
-    const interval = parseIntervalOption(req.query);
-    const bestPeriodHours = parseBestPeriodHours(req.query);
-    const includeWindSolar = parseBooleanParam(req.query, 'includeWindSolar');
-    const markupOptions = parseMarkupOptions(req.query, countryCode);
+  const interval = parseIntervalOption(req.query);
+  const bestPeriodHours = parseBestPeriodHours(req.query);
+  const includeWindSolar = parseBooleanParam(req.query, 'includeWindSolar');
+  const markupOptions = parseMarkupOptions(req.query, countryCode);
 
-    const country = COUNTRIES[countryCode];
+  const country = COUNTRIES[countryCode];
 
-    const now = new Date();
-    const nowInTargetTz = toZonedTime(now, country.timezone);
-    const todayStartInTargetTz = startOfDay(nowInTargetTz);
-    const todayEndInTargetTz = endOfDay(nowInTargetTz);
-    const todayStart = fromZonedTime(todayStartInTargetTz, country.timezone);
-    const todayEnd = fromZonedTime(todayEndInTargetTz, country.timezone);
+  const dayInTargetTz = addDays(toZonedTime(new Date(), country.timezone), dayOffset);
+  const dayStart = fromZonedTime(startOfDay(dayInTargetTz), country.timezone);
+  const dayEnd = fromZonedTime(endOfDay(dayInTargetTz), country.timezone);
 
-    const result = await fetchPricesWithWindSolar(countryCode, markupOptions, { interval }, includeWindSolar);
+  const result = await fetchPricesWithWindSolar(countryCode, markupOptions, { interval }, includeWindSolar);
 
-    const todayPrices = result.prices.filter(price => {
-      const priceTime = new Date(price.time);
-      return priceTime >= todayStart && priceTime <= todayEnd;
-    });
+  const dayPrices = result.prices.filter(price => {
+    const priceTime = new Date(price.time);
+    return priceTime >= dayStart && priceTime <= dayEnd;
+  });
 
-    const enrichedPrices = enrichPricesWithCountryInfo(todayPrices, countryCode);
+  const enrichedPrices = enrichPricesWithCountryInfo(dayPrices, countryCode);
 
-    const response = buildCountryResponse(countryCode, enrichedPrices, markupOptions, 'today', {
-      date: now.toLocaleDateString(country.locale, { timeZone: country.timezone }),
+  res.json(
+    buildCountryResponse(countryCode, enrichedPrices, markupOptions, type, {
+      date: dayStart.toLocaleDateString(country.locale, { timeZone: country.timezone }),
       source: result.source,
       resolutionMinutes: result.resolutionMinutes,
       warnings: result.warnings,
       bestPeriod: bestPeriodFor(enrichedPrices, bestPeriodHours, result, markupOptions)
-    });
+    })
+  );
+}
 
-    res.json(response);
+router.get('/:country/today', async (req, res, next) => {
+  try {
+    await sendLocalDay(req, res, 0, 'today');
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:country/tomorrow', async (req, res, next) => {
+  try {
+    await sendLocalDay(req, res, 1, 'tomorrow');
   } catch (error) {
     next(error);
   }
