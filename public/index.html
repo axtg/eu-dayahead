@@ -130,7 +130,7 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-    <link rel="preload" href="/app.js?v=4" as="script" />
+    <link rel="preload" href="/app.js?v=5" as="script" />
     <link rel="preload" href="/styles.css?v=3" as="style" />
     <link rel="stylesheet" href="/styles.css?v=3" />
     <link rel="stylesheet" href="/tailwind.css?v=2" />
@@ -422,6 +422,16 @@
             </section>
 
             <section class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-1">AI assistants (MCP)</h3>
+              <p class="text-sm mb-3">Ask Claude or another assistant "when today should I run my 4-hour dishwasher?" and get an answer from these prices. It only suggests times still ahead, and can run past midnight once tomorrow's prices are published.</p>
+              <div class="flex flex-wrap items-center gap-2 mb-3">
+                <code id="mcpUrl" class="text-sm bg-white border border-gray-200 rounded-md px-3 py-2 break-all"></code>
+                <button id="mcpCopy" type="button" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-md">Copy link</button>
+              </div>
+              <p class="text-xs text-gray-600">In Claude, add this as a custom connector with "No sign in". It then also works in the mobile app.</p>
+            </section>
+
+            <section class="bg-gray-50 rounded-lg p-4">
               <h3 class="text-lg font-medium text-gray-900 mb-1">TRMNL</h3>
               <p class="text-sm mb-3">Show prices on a TRMNL e-ink display: a bar chart with the cheapest period marked, so you can see at a glance when to run things.</p>
               <ul class="list-disc list-inside space-y-1 text-sm mb-3">
@@ -578,7 +588,7 @@
       </div>
     </div>
 
-    <script src="/app.js?v=4" defer></script>
+    <script src="/app.js?v=5" defer></script>
   </body>
 </html>
 

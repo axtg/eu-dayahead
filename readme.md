@@ -153,6 +153,18 @@ Subscribe to `/api/{country}/calendar.ics` to get one event a day for the cheape
 
 Windows use quarter-hour prices where the zone publishes them, and can't cross midnight. Calendar apps decide how often they reload a feed. Google Calendar can take a day, so on Android an app like ICSx⁵ with a set sync interval works better.
 
+### 🤖 MCP server
+
+`/mcp` lets AI assistants answer questions like "when today should I run my 4-hour dishwasher?". It's a stateless [MCP](https://modelcontextprotocol.io) server over Streamable HTTP, with no sign-in. In Claude, add `https://dap.xadi.eu/mcp` as a custom connector with "No sign in".
+
+| Tool | What it does |
+|------|--------------|
+| `find_cheapest_window` | The cheapest block of `hours` that starts `today` or `tomorrow`, never in the past. `from` is the earliest start hour and `to` the latest finish. Without `to`, a window can run past midnight when the next day's prices are known. |
+| `get_prices` | Prices for today, or the `nextHours` (1-48), by the hour or quarter hour. |
+| `list_countries` | Supported countries with their codes, timezones and default VAT. |
+
+Times are local to the country. `markup` and `includeVat` are optional and only change the price shown.
+
 ### 🏢 Energy provider presets
 
 | Endpoint                                  | Description               |

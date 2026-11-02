@@ -16,6 +16,7 @@ const { securityHeaders } = require('./middleware/securityHeaders');
 // Import route handlers
 const { PRICES_UNAVAILABLE_MESSAGE } = require('./utils/helpers');
 const calendarRoutes = require('./routes/calendar');
+const mcpRoute = require('./routes/mcp');
 const countryRoutes = require('./routes/countries');
 const providerRoutes = require('./routes/providers');
 const docsRoutes = require('./routes/docs');
@@ -76,6 +77,7 @@ app.get('/openapi.yaml', (req, res) => {
 app.use('/api', rateLimiter, calendarRoutes, countryRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/docs', docsRoutes);
+app.all('/mcp', rateLimiter, mcpRoute);
 
 // Fallback to index.html for root
 app.get('/', (req, res) => {

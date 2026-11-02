@@ -123,11 +123,27 @@
     return update;
   }
 
+  function setupMcpCard() {
+    const copy = document.getElementById('mcpCopy');
+    const url = `${window.location.origin}/mcp`;
+    document.getElementById('mcpUrl').textContent = url;
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        copy.textContent = 'Copied!';
+        setTimeout(() => (copy.textContent = 'Copy link'), 1000);
+      } catch (e) {
+        console.error('Copy failed', e);
+      }
+    });
+  }
+
   let openIntegrationsFromHash = () => {};
 
   function setupIntegrationsModal() {
     const modal = document.getElementById('integrationsModal');
     const updateCalendarCard = setupCalendarCard();
+    setupMcpCard();
 
     function open() {
       document.getElementById('aboutModal').classList.add('hidden');
