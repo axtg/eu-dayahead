@@ -137,6 +137,7 @@ curl http://localhost:3000/api/countries
 | ----------------------------- | ------------------------------- | ------------------ |
 | `GET /api/countries`          | List all supported countries    |                    |
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
+| `GET /api/{country}/tomorrow` | Tomorrow's prices, empty until published | `/api/nl/tomorrow` |
 | `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
 | `GET /api/{country}/next/{hours}` | Next 1-48 hours from now    | `/api/fr/next/6`   |
 | `GET /api/{country}/calendar.ics` | Cheapest window per day, as a calendar feed | `/api/nl/calendar.ics?hours=4&from=7&to=22` |

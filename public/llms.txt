@@ -38,6 +38,7 @@ License: MIT (code) · Data attribution: ENTSOE Transparency Platform, stekker.a
 
 - GET /api/countries — list supported countries with metadata
 - GET /api/{country}/today — today's 24 hourly prices in the country's local timezone
+- GET /api/{country}/tomorrow — tomorrow's prices in the country's local timezone; `data` is empty until they're published in the early afternoon
 - GET /api/{country}/next24h — the next 24 hours starting from the current hour
 - GET /api/{country}/next/{hours} — the next N hours (1–48)
 - GET /api/providers — list supported provider markup presets

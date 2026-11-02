@@ -1,4 +1,4 @@
-/* global Chart */
+/* global Chart, CheapestStart */
 (function () {
   const els = {
     country: document.getElementById('country'),
@@ -8,6 +8,7 @@
     interval: document.getElementById('interval'),
     windSolar: document.getElementById('windSolar'),
     windSolarNote: document.getElementById('windSolarNote'),
+    cheapestLength: document.getElementById('cheapestLength'),
     status: document.getElementById('statusMessage')
   };
 
@@ -29,8 +30,7 @@
   }
 
   function buildEndpoint({ country, timeframe, markupCents, vatPercent, interval, includeWindSolar }) {
-    const tfPath = timeframe === 'next24h' ? 'next24h' : 'today';
-    const base = `/api/${country}/${tfPath}`;
+    const base = `/api/${country}/${timeframe}`;
 
     const params = new URLSearchParams();
     const markup = centsToEuros(markupCents);
@@ -270,8 +270,7 @@
   }
 
   // Fractional x-axis position of the current time, or null when it's outside the data.
-  function nowPosition(times, resolutionMinutes) {
-    const now = Date.now();
+  function nowPosition(times, resolutionMinutes, now = Date.now()) {
     const starts = times.map(t => new Date(t).getTime());
     const last = starts.length - 1;
     if (last < 0 || now < starts[0] || now >= starts[last] + resolutionMinutes * 60000) return null;
@@ -303,6 +302,107 @@
         canvas.textAlign = labelOnLeft ? 'right' : 'left';
         canvas.textBaseline = 'top';
         canvas.fillText('Now', x + (labelOnLeft ? -5 : 5), chartArea.top + 3);
+        canvas.restore();
+      }
+    };
+  }
+
+  // The prices on screen, which the cheapest start is worked out from. Null when no prices are showing.
+  let displayed = null;
+  let cheapestWindow = null;
+
+  function localTime(iso) {
+    return new Date(iso).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: displayed.timezone
+    });
+  }
+
+  function cheapestWindowLines() {
+    return [
+      CheapestStart.startLabel(cheapestWindow.delayHours),
+      `${localTime(cheapestWindow.start)}\u2013${localTime(cheapestWindow.end)}`,
+      `avg \u20ac${cheapestWindow.averagePrice.toFixed(3)}`
+    ];
+  }
+
+  function noWindowMessage() {
+    const length = CheapestStart.formatLength(Number(els.cheapestLength.value));
+    if (displayed.timeframe === 'today') return `A ${length} run no longer fits before midnight. Try Next 24h.`;
+    if (displayed.timeframe === 'tomorrow') {
+      return `A ${length} run tomorrow is out of reach of a 20-hour delay. Try Next 24h.`;
+    }
+    return `Not enough prices are known yet for a ${length} run.`;
+  }
+
+  // Runs on load, on a new length and every minute, because the possible start times move with the clock.
+  function updateCheapestStart() {
+    if (!displayed) return;
+    cheapestWindow = CheapestStart.findCheapestStart(displayed.prices, {
+      lengthMinutes: Number(els.cheapestLength.value),
+      resolutionMinutes: displayed.resolutionMinutes,
+      nowMs: Date.now()
+    });
+    const notices = [warningMessages(displayed.warnings), cheapestWindow ? '' : noWindowMessage()];
+    setNotice('warning', notices.filter(Boolean).join(' '));
+    document.getElementById('cheapestSummary').textContent = cheapestWindow
+      ? `Cheapest: ${cheapestWindowLines().join(', ')}.`
+      : '';
+  }
+
+  function cheapestWindowPlugin(dark) {
+    // The chart gives the last price no width, so a window reaching into it stops at the right edge.
+    function bandEdges(chartInstance) {
+      const times = displayed.prices.map(p => p.time);
+      const lastStart = new Date(times[times.length - 1]).getTime();
+      const pixel = iso => {
+        const position = nowPosition(times, displayed.resolutionMinutes, Math.min(new Date(iso).getTime(), lastStart));
+        return chartInstance.scales.x.getPixelForValue(position);
+      };
+      return { left: pixel(cheapestWindow.start), right: pixel(cheapestWindow.end) };
+    }
+
+    return {
+      id: 'cheapestWindow',
+      beforeDatasetsDraw(chartInstance) {
+        if (!cheapestWindow) return;
+        const { ctx: canvas, chartArea } = chartInstance;
+        const { left, right } = bandEdges(chartInstance);
+        canvas.save();
+        canvas.fillStyle = dark ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.2)';
+        canvas.fillRect(left, chartArea.top, Math.max(right - left, 2), chartArea.bottom - chartArea.top);
+        canvas.restore();
+      },
+      afterDatasetsDraw(chartInstance) {
+        if (!cheapestWindow) return;
+        const { ctx: canvas, chartArea } = chartInstance;
+        const { left, right } = bandEdges(chartInstance);
+        const lines = cheapestWindowLines();
+        const font = i => `${i === 0 ? '700 13px' : '400 12px'} ${Chart.defaults.font.family}`;
+        canvas.save();
+        canvas.font = font(0);
+        const halfWidth = Math.max(...lines.map(line => canvas.measureText(line).width)) / 2;
+        // A short window's text runs past its band, but stays on the chart.
+        const x = Math.min(Math.max((left + right) / 2, chartArea.left + halfWidth), chartArea.right - halfWidth);
+        // Stay clear of the "Now" label, which sits beside its line at the top of the chart.
+        const nowAt = displayed.timeframe === 'today'
+          ? nowPosition(displayed.prices.map(p => p.time), displayed.resolutionMinutes)
+          : null;
+        const nowX = nowAt === null ? null : chartInstance.scales.x.getPixelForValue(nowAt);
+        const nearNow = nowX !== null && nowX > x - halfWidth - 40 && nowX < x + halfWidth + 40;
+        const top = chartArea.top + (nearNow ? 20 : 4);
+        canvas.textAlign = 'center';
+        canvas.textBaseline = 'top';
+        canvas.lineJoin = 'round';
+        canvas.lineWidth = 3;
+        canvas.strokeStyle = dark ? '#111827' : '#ffffff';
+        canvas.fillStyle = dark ? '#6ee7b7' : '#065f46';
+        lines.forEach((line, i) => {
+          canvas.font = font(i);
+          canvas.strokeText(line, x, top + i * 16);
+          canvas.fillText(line, x, top + i * 16);
+        });
         canvas.restore();
       }
     };
@@ -342,7 +442,10 @@
 
     chart = new Chart(ctx, {
       type: 'line',
-      plugins: nowMarkerTimes ? [nowMarkerPlugin(nowMarkerTimes, resolutionMinutes, dark ? '#60a5fa' : '#2563eb')] : [],
+      plugins: [
+        cheapestWindowPlugin(dark),
+        ...(nowMarkerTimes ? [nowMarkerPlugin(nowMarkerTimes, resolutionMinutes, dark ? '#60a5fa' : '#2563eb')] : [])
+      ],
       data: {
         labels,
         datasets: [
@@ -477,6 +580,9 @@
     if (chart) chart.destroy();
     chart = null;
     lastChartArgs = null;
+    displayed = null;
+    cheapestWindow = null;
+    document.getElementById('cheapestSummary').textContent = '';
     document.getElementById('priceStats').classList.add('hidden');
   }
 
@@ -515,7 +621,14 @@
       }
 
       const nowMarkerTimes = payload?.info?.type === 'today' ? payload.data.map(p => p.time) : null;
-      setNotice('warning', warningMessages(payload?.warnings));
+      displayed = {
+        prices: payload.data.map(p => ({ time: p.time, price: Number(p.price) })),
+        resolutionMinutes,
+        timezone: payload?.info?.timezone,
+        timeframe,
+        warnings: payload?.warnings
+      };
+      updateCheapestStart();
       updatePriceStats(labels, series, unit);
       renderChart(labels, series, unit, resolutionMinutes, nowMarkerTimes, windSolarSeries);
     } catch (err) {
@@ -526,21 +639,47 @@
     }
   }
 
-  function setPillActive(activeBtn, inactiveBtn) {
-    if (!activeBtn || !inactiveBtn) return;
+  function setPillActive(activeBtn, ...inactiveBtns) {
     activeBtn.classList.add('bg-black','text-white','hover:bg-gray-800');
     activeBtn.classList.remove('text-gray-700','hover:bg-gray-50');
     activeBtn.setAttribute('aria-pressed','true');
-    inactiveBtn.classList.remove('bg-black','text-white','hover:bg-gray-800');
-    inactiveBtn.classList.add('text-gray-700','hover:bg-gray-50');
-    inactiveBtn.setAttribute('aria-pressed','false');
+    inactiveBtns.forEach(btn => {
+      btn.classList.remove('bg-black','text-white','hover:bg-gray-800');
+      btn.classList.add('text-gray-700','hover:bg-gray-50');
+      btn.setAttribute('aria-pressed','false');
+    });
   }
 
-  function setSwitchActive(which) {
-    const btnToday = document.getElementById('tfToday');
-    const btnNext = document.getElementById('tfNext24h');
-    if (which === 'today') setPillActive(btnToday, btnNext);
-    else setPillActive(btnNext, btnToday);
+  const TIMEFRAME_BUTTONS = { next24h: 'tfNext24h', today: 'tfToday', tomorrow: 'tfTomorrow' };
+
+  function setTimeframe(which) {
+    els.timeframe.value = which;
+    const others = Object.keys(TIMEFRAME_BUTTONS).filter(key => key !== which);
+    setPillActive(
+      document.getElementById(TIMEFRAME_BUTTONS[which]),
+      ...others.map(key => document.getElementById(TIMEFRAME_BUTTONS[key]))
+    );
+  }
+
+  // Tomorrow's button only works once its prices are out. A failed check changes nothing.
+  let latestTomorrowCheck = 0;
+  async function updateTomorrowAvailability() {
+    const checkId = ++latestTomorrowCheck;
+    let available;
+    try {
+      const payload = await fetchJSON(`/api/${els.country.value}/tomorrow`);
+      available = payload.data.length > 0;
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+    if (checkId !== latestTomorrowCheck) return;
+    document.getElementById('tfTomorrow').disabled = !available;
+    if (!available && els.timeframe.value === 'tomorrow') {
+      setTimeframe('next24h');
+      saveState();
+      refresh();
+    }
   }
 
   function setIntervalActive(which) {
@@ -556,10 +695,16 @@
       updateVatForCountry(els.country.value);
       saveState();
       refresh();
+      updateTomorrowAvailability();
     });
     els.markupCents.addEventListener('input', () => { saveState(); refresh(); });
     els.vatPercent.addEventListener('input', () => { saveState(); refresh(); });
     els.windSolar.addEventListener('change', () => { saveState(); refresh(); });
+    els.cheapestLength.addEventListener('change', () => {
+      saveState();
+      updateCheapestStart();
+      if (chart) chart.draw();
+    });
 
     // Clear buttons. Zero rather than empty, because an empty saved VAT falls back to the country default on reload.
     [['clearVat', els.vatPercent], ['clearMarkup', els.markupCents]].forEach(([id, input]) => {
@@ -641,19 +786,12 @@
     });
 
     // Timeframe switch
-    const btnToday = document.getElementById('tfToday');
-    const btnNext = document.getElementById('tfNext24h');
-    btnToday?.addEventListener('click', () => {
-      els.timeframe.value = 'today';
-      setSwitchActive('today');
-      saveState();
-      refresh();
-    });
-    btnNext?.addEventListener('click', () => {
-      els.timeframe.value = 'next24h';
-      setSwitchActive('next24h');
-      saveState();
-      refresh();
+    Object.entries(TIMEFRAME_BUTTONS).forEach(([timeframe, id]) => {
+      document.getElementById(id).addEventListener('click', () => {
+        setTimeframe(timeframe);
+        saveState();
+        refresh();
+      });
     });
 
     // Interval (resolution) switch
@@ -677,14 +815,18 @@
     copyBtn?.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(currentFullUrl || '');
-        const original = copyBtn.textContent;
+        const original = copyBtn.innerHTML;
         copyBtn.textContent = 'Copied!';
-        setTimeout(() => (copyBtn.textContent = original), 1000);
+        setTimeout(() => (copyBtn.innerHTML = original), 1000);
       } catch (e) {
         console.error('Copy failed', e);
       }
     });
   }
+
+  // Lengths offered for the cheapest start, in minutes: every 15 minutes up to 12 hours.
+  const CHEAPEST_LENGTHS = Array.from({ length: 48 }, (_, i) => (i + 1) * 15);
+  const DEFAULT_CHEAPEST_LENGTH = 240;
 
   // Local storage
   const LS_KEY = 'dap_ui_state_v1';
@@ -696,7 +838,8 @@
         markupCents: els.markupCents.value,
         vatPercent: els.vatPercent.value,
         interval: els.interval.value,
-        windSolar: els.windSolar.checked
+        windSolar: els.windSolar.checked,
+        cheapestLength: els.cheapestLength.value
       };
       localStorage.setItem(LS_KEY, JSON.stringify(state));
     } catch {
@@ -717,8 +860,13 @@
     document.getElementById('year').textContent = new Date().getFullYear();
     bindTheme();
     bindEvents();
-    // Keep the "Now" marker moving while the page stays open.
-    setInterval(() => { if (chart) chart.draw(); }, 60000);
+    fillOptions(els.cheapestLength, CHEAPEST_LENGTHS, CheapestStart.formatLength, DEFAULT_CHEAPEST_LENGTH);
+    // Keep the "Now" marker and the cheapest start moving while the page stays open.
+    setInterval(() => {
+      updateCheapestStart();
+      if (chart) chart.draw();
+    }, 60000);
+    setInterval(updateTomorrowAvailability, 10 * 60000);
     try {
       await loadCountries();
     } catch (err) {
@@ -734,20 +882,20 @@
       }
       if (saved.markupCents) els.markupCents.value = saved.markupCents;
       if (saved.vatPercent) els.vatPercent.value = saved.vatPercent;
-      els.timeframe.value = saved.timeframe || 'next24h';
-      setSwitchActive(els.timeframe.value);
+      setTimeframe(TIMEFRAME_BUTTONS[saved.timeframe] ? saved.timeframe : 'next24h');
       els.interval.value = saved.interval || '60M';
       setIntervalActive(els.interval.value);
       els.windSolar.checked = saved.windSolar === true;
+      if (CHEAPEST_LENGTHS.includes(Number(saved.cheapestLength))) els.cheapestLength.value = saved.cheapestLength;
     } else {
       // Default to next24h and Netherlands VAT
-      els.timeframe.value = 'next24h';
-      setSwitchActive('next24h');
+      setTimeframe('next24h');
       els.interval.value = '60M';
       setIntervalActive('60M');
       updateVatForCountry('nl');
     }
     openIntegrationsFromHash();
+    await updateTomorrowAvailability();
     await refresh();
   }
 

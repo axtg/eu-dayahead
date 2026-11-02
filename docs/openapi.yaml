@@ -143,6 +143,39 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+  /api/{country}/tomorrow:
+    get:
+      operationId: get_api__country__tomorrow
+      tags:
+        - Countries
+      summary: Get tomorrow's energy prices
+      description: >-
+        Get energy prices for a specific country from 00:00 to 23:59 of the next day. Day-ahead prices are published
+        in the early afternoon, so until then `data` is an empty array.
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+        - $ref: '#/components/parameters/Interval'
+        - $ref: '#/components/parameters/BestPeriodHours'
+        - $ref: '#/components/parameters/IncludeWindSolar'
+      responses:
+        '200':
+          description: Tomorrow's energy prices, or an empty `data` array if they aren't published yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /api/{country}/next24h:
     get:
       operationId: get_api__country__next24h
