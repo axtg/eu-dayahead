@@ -7,6 +7,8 @@ const { COUNTRIES } = require('../config/countries');
 const {
   parseMarkupOptions,
   parseIntervalOption,
+  parseBestPeriodHours,
+  findBestPeriod,
   validateCountry,
   fetchCountryPrices,
   enrichPricesWithCountryInfo,
@@ -36,11 +38,17 @@ router.get('/countries', (req, res) => {
   res.json({ status: 'success', data: countries, total: countries.length });
 });
 
+function bestPeriodFor(prices, bestPeriodHours, result, markupOptions) {
+  if (bestPeriodHours === undefined) return undefined;
+  return findBestPeriod(prices, bestPeriodHours, result.resolutionMinutes, markupOptions.roundTo);
+}
+
 router.get('/:country/today', async (req, res, next) => {
   try {
     const countryCode = requireCountry(req);
 
     const interval = parseIntervalOption(req.query);
+    const bestPeriodHours = parseBestPeriodHours(req.query);
     const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const country = COUNTRIES[countryCode];
@@ -65,7 +73,8 @@ router.get('/:country/today', async (req, res, next) => {
       date: now.toLocaleDateString(country.locale, { timeZone: country.timezone }),
       source: result.source,
       resolutionMinutes: result.resolutionMinutes,
-      warnings: result.warnings
+      warnings: result.warnings,
+      bestPeriod: bestPeriodFor(enrichedPrices, bestPeriodHours, result, markupOptions)
     });
 
     res.json(response);
@@ -76,6 +85,7 @@ router.get('/:country/today', async (req, res, next) => {
 
 async function sendNextHours(req, res, countryCode, hours, type, { reportHours = false } = {}) {
   const interval = parseIntervalOption(req.query);
+  const bestPeriodHours = parseBestPeriodHours(req.query);
   const markupOptions = parseMarkupOptions(req.query, countryCode);
 
   const country = COUNTRIES[countryCode];
@@ -108,7 +118,8 @@ async function sendNextHours(req, res, countryCode, hours, type, { reportHours =
       ...hoursInfo,
       source: result.source,
       resolutionMinutes: result.resolutionMinutes,
-      warnings: result.warnings
+      warnings: result.warnings,
+      bestPeriod: bestPeriodFor(enrichedPrices, bestPeriodHours, result, markupOptions)
     })
   );
 }

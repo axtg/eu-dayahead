@@ -54,6 +54,7 @@ node_modules/
 .Trashes
 ehthumbs.db
 Thumbs.db
+*:Zone.Identifier
 
 # Docker
 *.tar

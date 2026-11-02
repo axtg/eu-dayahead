@@ -157,6 +157,7 @@ curl http://localhost:3000/api/countries
 | `autoVat`                 | Boolean | Use country's default VAT                                                                         | `true`           |
 | `roundTo`                 | Integer | Decimal places to round to                                                                        | `5` (default)    |
 | `interval`                | String  | Granularity: `60M` (default; hourly mean) or `15M` (quarter-hour pass-through, ~96 entries/day)   | `60M`            |
+| `bestPeriodHours`         | Integer | Adds `bestPeriod`: cheapest run of this many hours (1-24) within the data                         | `4`              |
 
 ## 💡 Usage examples
 

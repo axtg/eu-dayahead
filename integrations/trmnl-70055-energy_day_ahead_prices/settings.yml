@@ -1,0 +1,133 @@
+---
+strategy: polling
+no_screen_padding: 'yes'
+dark_mode: 'no'
+static_data: ''
+polling_verb: get
+framework_version: 2.3.7
+serverless_language: ''
+refresh_interval_floor:
+polling_url: "https://dap.xadi.eu/api/{{ country }}/{% assign tf = timeframe | downcase %}{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}"
+polling_headers: ''
+polling_body: ''
+id: 70055
+oauth_enabled: 'false'
+oauth_pkce_enabled: 'no'
+oauth_authorize_url: ''
+oauth_token_url: ''
+oauth_scopes: ''
+oauth_scope_separator: ''
+oauth_refresh_url: ''
+oauth_auth_params: ''
+oauth_token_headers: ''
+oauth_token_site: ''
+oauth_token_params: ''
+oauth_token_request_auth_method: ''
+oauth_body_format: ''
+oauth_token_response_metadata: ''
+oauth_authorization_method: ''
+oauth_refresh_params: ''
+oauth_token_field_name: ''
+oauth_expiry_field_name: ''
+oauth_expiry_strategy: ''
+oauth_fixed_expiry_ms: ''
+custom_fields:
+- keyname: xadi.eu
+  name: About this plugin
+  field_type: author_bio
+  description: EU Energy Day Ahead Prices was created by Xander (@axtg).
+  github_url: https://github.com/axtg/eu-dayahead/
+  learn_more_url: https://dap.xadi.eu/docs
+- keyname: timeframe
+  name: Timeframe
+  field_type: select
+  options:
+  - Today: 'today'
+  - Next 12 hours: 'next12'
+  - Next 24 hours: 'next24h'
+  - All published prices: 'nextall'
+  description: Period to show. Tomorrow's prices are published from about 14:00, so before that the next hours can be fewer than chosen.
+  default: 'next24h'
+- keyname: country
+  name: Country
+  field_type: select
+  options:
+  - Netherlands: 'nl'
+  - Austria: 'at'
+  - Belgium: 'be'
+  - Denmark: 'dk'
+  - France: 'fr'
+  - Germany: 'de'
+  - Norway: 'no'
+  - Sweden: 'se'
+  - Switzerland: 'ch'
+  description: Country of which to show the energy prices
+  default: 'nl'
+- keyname: resolution
+  name: Data resolution
+  field_type: select
+  options:
+  - 15M
+  - 60M
+  description: Plot data at an hourly (60M) or 15 minute (15M) resolution. Switzerland is always hourly.
+  default: 60M
+- keyname: markup
+  name: Provider markup
+  field_type: number
+  description: Markup to add on top of the spot/ market price, in EUR/kWh (0.12 = 12 cents)
+  step: 0.001
+  default: 0
+- keyname: variable_markup
+  name: Variable markup
+  field_type: number
+  description: Percentage markup on top of the spot/ market price (e.g. 10 for 10%)
+  step: 0.01
+  optional: true
+- keyname: vat
+  name: VAT
+  field_type: number
+  step: 0.001
+  description: 'Added tax as a decimal: 0.21, not 21. Leave blank to use the country''s rate.'
+  optional: true
+- keyname: round_to
+  name: Decimals
+  field_type: select
+  options:
+  - 5 decimals: '5'
+  - 2 decimals: '2'
+  - 3 decimals: '3'
+  - 4 decimals: '4'
+  description: Number of decimals to round prices to
+  default: '5'
+  optional: true
+- keyname: best_period_hours
+  name: Best period length
+  field_type: select
+  options:
+  - 1 hour: '1'
+  - 2 hours: '2'
+  - 3 hours: '3'
+  - 4 hours: '4'
+  - 6 hours: '6'
+  - 8 hours: '8'
+  description: Length of the cheapest period to highlight
+  default: '4'
+  optional: true
+- keyname: language
+  name: Language
+  field_type: select
+  options:
+  - Device language: 'device'
+  - English: 'en'
+  - Nederlands: 'nl'
+  - Deutsch: 'de'
+  - Français: 'fr'
+  - Dansk: 'da'
+  - Norsk: 'nb'
+  - Svenska: 'sv'
+  description: Language of the labels in the chart
+  default: 'device'
+  optional: true
+name: EU Energy Day Ahead Prices
+description:
+refresh_interval: 120

@@ -1,0 +1,421 @@
+{
+  "status": "success",
+  "country": {
+    "code": "DE",
+    "name": "Germany",
+    "currency": "EUR",
+    "timezone": "Europe/Berlin"
+  },
+  "data": [
+    {
+      "time": "2026-11-01T21:00:00.000Z",
+      "priceMwh": 250.825,
+      "price": 0.25082,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.25082499999999996
+      },
+      "localTime": "So., 1. Nov., 22:00",
+      "hour": "22:00",
+      "hourFromNow": 0,
+      "dayOfWeek": "Sunday"
+    },
+    {
+      "time": "2026-11-01T22:00:00.000Z",
+      "priceMwh": 234.77,
+      "price": 0.23477,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23477
+      },
+      "localTime": "So., 1. Nov., 23:00",
+      "hour": "23:00",
+      "hourFromNow": 1,
+      "dayOfWeek": "Sunday"
+    },
+    {
+      "time": "2026-11-01T23:00:00.000Z",
+      "priceMwh": 243,
+      "price": 0.243,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.243
+      },
+      "localTime": "Mo., 2. Nov., 00:00",
+      "hour": "00:00",
+      "hourFromNow": 2,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T00:00:00.000Z",
+      "priceMwh": 237.1925,
+      "price": 0.23719,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2371925
+      },
+      "localTime": "Mo., 2. Nov., 01:00",
+      "hour": "01:00",
+      "hourFromNow": 3,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T01:00:00.000Z",
+      "priceMwh": 230.04500000000002,
+      "price": 0.23005,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23004500000000003
+      },
+      "localTime": "Mo., 2. Nov., 02:00",
+      "hour": "02:00",
+      "hourFromNow": 4,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T02:00:00.000Z",
+      "priceMwh": 228.57999999999998,
+      "price": 0.22858,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.22857999999999998
+      },
+      "localTime": "Mo., 2. Nov., 03:00",
+      "hour": "03:00",
+      "hourFromNow": 5,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T03:00:00.000Z",
+      "priceMwh": 227.9875,
+      "price": 0.22799,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2279875
+      },
+      "localTime": "Mo., 2. Nov., 04:00",
+      "hour": "04:00",
+      "hourFromNow": 6,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T04:00:00.000Z",
+      "priceMwh": 241.7475,
+      "price": 0.24175,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2417475
+      },
+      "localTime": "Mo., 2. Nov., 05:00",
+      "hour": "05:00",
+      "hourFromNow": 7,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T05:00:00.000Z",
+      "priceMwh": 304.9125,
+      "price": 0.30491,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.30491250000000003
+      },
+      "localTime": "Mo., 2. Nov., 06:00",
+      "hour": "06:00",
+      "hourFromNow": 8,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T06:00:00.000Z",
+      "priceMwh": 328.34999999999997,
+      "price": 0.32835,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.32835
+      },
+      "localTime": "Mo., 2. Nov., 07:00",
+      "hour": "07:00",
+      "hourFromNow": 9,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T07:00:00.000Z",
+      "priceMwh": 321.015,
+      "price": 0.32102,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.321015
+      },
+      "localTime": "Mo., 2. Nov., 08:00",
+      "hour": "08:00",
+      "hourFromNow": 10,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T08:00:00.000Z",
+      "priceMwh": 290.5475,
+      "price": 0.29055,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2905475
+      },
+      "localTime": "Mo., 2. Nov., 09:00",
+      "hour": "09:00",
+      "hourFromNow": 11,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T09:00:00.000Z",
+      "priceMwh": 243.5625,
+      "price": 0.24356,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2435625
+      },
+      "localTime": "Mo., 2. Nov., 10:00",
+      "hour": "10:00",
+      "hourFromNow": 12,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T10:00:00.000Z",
+      "priceMwh": 216.7325,
+      "price": 0.21673,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2167325
+      },
+      "localTime": "Mo., 2. Nov., 11:00",
+      "hour": "11:00",
+      "hourFromNow": 13,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T11:00:00.000Z",
+      "priceMwh": 210,
+      "price": 0.21,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.21
+      },
+      "localTime": "Mo., 2. Nov., 12:00",
+      "hour": "12:00",
+      "hourFromNow": 14,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T12:00:00.000Z",
+      "priceMwh": 210.22750000000002,
+      "price": 0.21023,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2102275
+      },
+      "localTime": "Mo., 2. Nov., 13:00",
+      "hour": "13:00",
+      "hourFromNow": 15,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T13:00:00.000Z",
+      "priceMwh": 217.03499999999997,
+      "price": 0.21703,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.21703499999999998
+      },
+      "localTime": "Mo., 2. Nov., 14:00",
+      "hour": "14:00",
+      "hourFromNow": 16,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T14:00:00.000Z",
+      "priceMwh": 252.6575,
+      "price": 0.25266,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2526575
+      },
+      "localTime": "Mo., 2. Nov., 15:00",
+      "hour": "15:00",
+      "hourFromNow": 17,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T15:00:00.000Z",
+      "priceMwh": 291.325,
+      "price": 0.29133,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.291325
+      },
+      "localTime": "Mo., 2. Nov., 16:00",
+      "hour": "16:00",
+      "hourFromNow": 18,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T16:00:00.000Z",
+      "priceMwh": 297.505,
+      "price": 0.29751,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.297505
+      },
+      "localTime": "Mo., 2. Nov., 17:00",
+      "hour": "17:00",
+      "hourFromNow": 19,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T17:00:00.000Z",
+      "priceMwh": 313.29,
+      "price": 0.31329,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.31329
+      },
+      "localTime": "Mo., 2. Nov., 18:00",
+      "hour": "18:00",
+      "hourFromNow": 20,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T18:00:00.000Z",
+      "priceMwh": 304.02250000000004,
+      "price": 0.30402,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.30402250000000003
+      },
+      "localTime": "Mo., 2. Nov., 19:00",
+      "hour": "19:00",
+      "hourFromNow": 21,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T19:00:00.000Z",
+      "priceMwh": 289.85249999999996,
+      "price": 0.28985,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.28985249999999996
+      },
+      "localTime": "Mo., 2. Nov., 20:00",
+      "hour": "20:00",
+      "hourFromNow": 22,
+      "dayOfWeek": "Monday"
+    },
+    {
+      "time": "2026-11-02T20:00:00.000Z",
+      "priceMwh": 250.63750000000002,
+      "price": 0.25064,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2506375
+      },
+      "localTime": "Mo., 2. Nov., 21:00",
+      "hour": "21:00",
+      "hourFromNow": 23,
+      "dayOfWeek": "Monday"
+    }
+  ],
+  "markup": {
+    "fixedMarkup": 0,
+    "variableMarkup": 0,
+    "vat": 0,
+    "includeVat": false,
+    "roundTo": 5
+  },
+  "fetchedAt": "2026-11-01T21:33:05.399Z",
+  "info": {
+    "type": "next24hours",
+    "totalIntervals": 24,
+    "totalHours": 24,
+    "resolutionMinutes": 60,
+    "priceUnit": "EUR/kWh",
+    "timezone": "Europe/Berlin",
+    "source": "entsoe",
+    "startTime": "2026-11-01T21:00:00.000Z",
+    "endTime": "2026-11-02T21:00:00.000Z"
+  },
+  "bestPeriod": {
+    "hours": 4,
+    "startTime": "2026-11-02T10:00:00.000Z",
+    "endTime": "2026-11-02T14:00:00.000Z",
+    "averagePrice": 0.2135,
+    "intervals": 4
+  }
+}

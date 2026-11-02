@@ -1,0 +1,372 @@
+{
+  "status": "success",
+  "country": {
+    "code": "NL",
+    "name": "Netherlands",
+    "currency": "EUR",
+    "timezone": "Europe/Amsterdam"
+  },
+  "data": [
+    {
+      "time": "2026-10-31T23:00:00.000Z",
+      "priceMwh": 245.785,
+      "price": 0.24579,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.245785
+      },
+      "localTime": "00:00",
+      "hour": "00:00"
+    },
+    {
+      "time": "2026-11-01T00:00:00.000Z",
+      "priceMwh": 244.465,
+      "price": 0.24447,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24446500000000002
+      },
+      "localTime": "01:00",
+      "hour": "01:00"
+    },
+    {
+      "time": "2026-11-01T01:00:00.000Z",
+      "priceMwh": 243.30749999999998,
+      "price": 0.24331,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24330749999999998
+      },
+      "localTime": "02:00",
+      "hour": "02:00"
+    },
+    {
+      "time": "2026-11-01T02:00:00.000Z",
+      "priceMwh": 237.88750000000002,
+      "price": 0.23789,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23788750000000003
+      },
+      "localTime": "03:00",
+      "hour": "03:00"
+    },
+    {
+      "time": "2026-11-01T03:00:00.000Z",
+      "priceMwh": 237.82,
+      "price": 0.23782,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23782
+      },
+      "localTime": "04:00",
+      "hour": "04:00"
+    },
+    {
+      "time": "2026-11-01T04:00:00.000Z",
+      "priceMwh": 240.2625,
+      "price": 0.24026,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2402625
+      },
+      "localTime": "05:00",
+      "hour": "05:00"
+    },
+    {
+      "time": "2026-11-01T05:00:00.000Z",
+      "priceMwh": 242.69,
+      "price": 0.24269,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24269
+      },
+      "localTime": "06:00",
+      "hour": "06:00"
+    },
+    {
+      "time": "2026-11-01T06:00:00.000Z",
+      "priceMwh": 247.77499999999998,
+      "price": 0.24777,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24777499999999997
+      },
+      "localTime": "07:00",
+      "hour": "07:00"
+    },
+    {
+      "time": "2026-11-01T07:00:00.000Z",
+      "priceMwh": 246.35000000000002,
+      "price": 0.24635,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24635
+      },
+      "localTime": "08:00",
+      "hour": "08:00"
+    },
+    {
+      "time": "2026-11-01T08:00:00.000Z",
+      "priceMwh": 238.69,
+      "price": 0.23869,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23868999999999999
+      },
+      "localTime": "09:00",
+      "hour": "09:00"
+    },
+    {
+      "time": "2026-11-01T09:00:00.000Z",
+      "priceMwh": 242.07,
+      "price": 0.24207,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.24206999999999998
+      },
+      "localTime": "10:00",
+      "hour": "10:00"
+    },
+    {
+      "time": "2026-11-01T10:00:00.000Z",
+      "priceMwh": 236.4375,
+      "price": 0.23644,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2364375
+      },
+      "localTime": "11:00",
+      "hour": "11:00"
+    },
+    {
+      "time": "2026-11-01T11:00:00.000Z",
+      "priceMwh": 236.5325,
+      "price": 0.23653,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2365325
+      },
+      "localTime": "12:00",
+      "hour": "12:00"
+    },
+    {
+      "time": "2026-11-01T12:00:00.000Z",
+      "priceMwh": 221.20499999999998,
+      "price": 0.22121,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.22120499999999998
+      },
+      "localTime": "13:00",
+      "hour": "13:00"
+    },
+    {
+      "time": "2026-11-01T13:00:00.000Z",
+      "priceMwh": 230.87,
+      "price": 0.23087,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23087
+      },
+      "localTime": "14:00",
+      "hour": "14:00"
+    },
+    {
+      "time": "2026-11-01T14:00:00.000Z",
+      "priceMwh": 258.9375,
+      "price": 0.25894,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2589375
+      },
+      "localTime": "15:00",
+      "hour": "15:00"
+    },
+    {
+      "time": "2026-11-01T15:00:00.000Z",
+      "priceMwh": 284.75,
+      "price": 0.28475,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.28475
+      },
+      "localTime": "16:00",
+      "hour": "16:00"
+    },
+    {
+      "time": "2026-11-01T16:00:00.000Z",
+      "priceMwh": 300.1875,
+      "price": 0.30019,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.3001875
+      },
+      "localTime": "17:00",
+      "hour": "17:00"
+    },
+    {
+      "time": "2026-11-01T17:00:00.000Z",
+      "priceMwh": 300.03999999999996,
+      "price": 0.30004,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.30004
+      },
+      "localTime": "18:00",
+      "hour": "18:00"
+    },
+    {
+      "time": "2026-11-01T18:00:00.000Z",
+      "priceMwh": 297.67,
+      "price": 0.29767,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.29767
+      },
+      "localTime": "19:00",
+      "hour": "19:00"
+    },
+    {
+      "time": "2026-11-01T19:00:00.000Z",
+      "priceMwh": 284.75,
+      "price": 0.28475,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.28475
+      },
+      "localTime": "20:00",
+      "hour": "20:00"
+    },
+    {
+      "time": "2026-11-01T20:00:00.000Z",
+      "priceMwh": 262.5175,
+      "price": 0.26252,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.26251749999999996
+      },
+      "localTime": "21:00",
+      "hour": "21:00"
+    },
+    {
+      "time": "2026-11-01T21:00:00.000Z",
+      "priceMwh": 250.89749999999998,
+      "price": 0.2509,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.2508975
+      },
+      "localTime": "22:00",
+      "hour": "22:00"
+    },
+    {
+      "time": "2026-11-01T22:00:00.000Z",
+      "priceMwh": 234.77,
+      "price": 0.23477,
+      "markup": {
+        "fixed": 0,
+        "variable": 0,
+        "vat": 0,
+        "vatPercent": "0%",
+        "originalPrice": 0.23477
+      },
+      "localTime": "23:00",
+      "hour": "23:00"
+    }
+  ],
+  "markup": {
+    "fixedMarkup": 0,
+    "variableMarkup": 0,
+    "vat": 0,
+    "includeVat": false,
+    "roundTo": 5
+  },
+  "fetchedAt": "2026-11-01T21:33:04.487Z",
+  "info": {
+    "type": "today",
+    "totalIntervals": 24,
+    "totalHours": 24,
+    "resolutionMinutes": 60,
+    "priceUnit": "EUR/kWh",
+    "timezone": "Europe/Amsterdam",
+    "source": "entsoe",
+    "date": "1-11-2026"
+  },
+  "bestPeriod": {
+    "hours": 4,
+    "startTime": "2026-11-01T10:00:00.000Z",
+    "endTime": "2026-11-01T14:00:00.000Z",
+    "averagePrice": 0.23126,
+    "intervals": 4
+  }
+}

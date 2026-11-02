@@ -161,6 +161,14 @@ function parseRoundTo(query) {
   return roundTo ?? 5;
 }
 
+function parseBestPeriodHours(query) {
+  const hours = parseNumberParam(query, 'bestPeriodHours', 1, 24);
+  if (hours !== undefined && !Number.isInteger(hours)) {
+    throw invalidParam('Invalid bestPeriodHours. Use a whole number from 1 to 24.');
+  }
+  return hours;
+}
+
 function parseMarkupOptions(query, country) {
   const countryConfig = COUNTRIES[country] || COUNTRIES.nl;
   const vat = parseVat(query, countryConfig);
@@ -184,6 +192,36 @@ function parseIntervalOption(query) {
     throw invalidParam(`Invalid interval '${raw}'. Valid values: 60M, 15M.`);
   }
   return normalised;
+}
+
+// Cheapest run of consecutive slots covering the requested hours. Each slot must be exactly one
+// resolution after the one before it, so a gap in the data never counts as part of a window. The earliest window wins
+// a tie; the epsilon absorbs floating-point drift between averages.
+function findBestPeriod(prices, hours, resolutionMinutes, roundTo) {
+  const slotCount = (hours * 60) / resolutionMinutes;
+  const stepMs = resolutionMinutes * 60000;
+  const times = prices.map(p => new Date(p.time).getTime());
+  let best = null;
+  for (let i = 0; i + slotCount <= prices.length; i++) {
+    let sum = prices[i].price;
+    let consecutive = true;
+    for (let j = i + 1; j < i + slotCount && consecutive; j++) {
+      consecutive = times[j] - times[j - 1] === stepMs;
+      sum += prices[j].price;
+    }
+    if (!consecutive) continue;
+    const average = sum / slotCount;
+    if (best === null || average < best.average - 1e-9) best = { index: i, average };
+  }
+  if (best === null) return null;
+  const factor = Math.pow(10, roundTo);
+  return {
+    hours,
+    startTime: new Date(times[best.index]).toISOString(),
+    endTime: new Date(times[best.index + slotCount - 1] + stepMs).toISOString(),
+    averagePrice: Math.round(best.average * factor) / factor,
+    intervals: slotCount
+  };
 }
 
 function validateCountry(countryCode) {
@@ -436,7 +474,7 @@ function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
 
 function buildCountryResponse(countryCode, data, markupOptions, type, additionalInfo = {}) {
   const country = COUNTRIES[countryCode];
-  const { source, resolutionMinutes, warnings, ...rest } = additionalInfo;
+  const { source, resolutionMinutes, warnings, bestPeriod, ...rest } = additionalInfo;
   const intervalCount = data.length;
   const totalHours = Math.floor((intervalCount * (resolutionMinutes || 60)) / 60);
 
@@ -464,6 +502,7 @@ function buildCountryResponse(countryCode, data, markupOptions, type, additional
   };
 
   if (warnings && warnings.length) response.warnings = warnings;
+  if (bestPeriod !== undefined) response.bestPeriod = bestPeriod;
   return response;
 }
 
@@ -496,6 +535,8 @@ function getCacheStats() {
 
 module.exports = {
   invalidParam,
+  parseBestPeriodHours,
+  findBestPeriod,
   PRICES_UNAVAILABLE_MESSAGE,
   pricesUnavailable,
   parseMarkupOptions,

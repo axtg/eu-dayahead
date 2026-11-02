@@ -1,0 +1,277 @@
+<script src="https://trmnl.com/js/highcharts/12.3.0/highcharts.js"></script>
+<script src="https://trmnl.com/js/highcharts/12.3.0/pattern-fill.js"></script>
+{% assign chart_id = 'chart' | append_random %}
+<div id="{{ chart_id }}" style="width: 100%;"></div>
+<div id="{{ chart_id }}-info" style="width: 100%; text-align: center; margin-top: 10px; font-weight: bold;"></div>
+<script type="text/javascript">
+(function () {
+  const STRINGS = {
+    en: {
+      titleToday: 'Power price today ({date})',
+      titleNext: 'Power price next {hours}h',
+      yAxis: 'Price (EUR/kWh)',
+      bestPeriod: 'Best {hours}-hour period: {start} - {end} (Ø {price})',
+      noPrices: 'No prices available',
+      warnFallbackSource: 'Prices from a backup source',
+      warnStaleData: 'Prices may be out of date',
+      warnIncompleteData: 'Prices missing for part of today',
+      warnGeneric: 'Data may be incomplete'
+    },
+    nl: {
+      titleToday: 'Stroomprijs vandaag ({date})',
+      titleNext: 'Stroomprijs komende {hours}u',
+      yAxis: 'Prijs (EUR/kWh)',
+      bestPeriod: 'Beste {hours}-uursperiode: {start} - {end} (Ø {price})',
+      noPrices: 'Geen prijzen beschikbaar',
+      warnFallbackSource: 'Prijzen van een reservebron',
+      warnStaleData: 'Prijzen zijn mogelijk verouderd',
+      warnIncompleteData: 'Prijzen ontbreken voor een deel van vandaag',
+      warnGeneric: 'Gegevens zijn mogelijk onvolledig'
+    },
+    de: {
+      titleToday: 'Strompreis heute ({date})',
+      titleNext: 'Strompreis nächste {hours} Std.',
+      yAxis: 'Preis (EUR/kWh)',
+      bestPeriod: 'Beste {hours}-Stunden-Periode: {start} - {end} (Ø {price})',
+      noPrices: 'Keine Preise verfügbar',
+      warnFallbackSource: 'Preise aus einer Ersatzquelle',
+      warnStaleData: 'Preise sind möglicherweise veraltet',
+      warnIncompleteData: 'Für einen Teil von heute fehlen Preise',
+      warnGeneric: 'Daten sind möglicherweise unvollständig'
+    },
+    fr: {
+      titleToday: 'Prix de l’électricité aujourd’hui ({date})',
+      titleNext: 'Prix de l’électricité, {hours} h à venir',
+      yAxis: 'Prix (EUR/kWh)',
+      bestPeriod: 'Meilleure période de {hours} h : {start} - {end} (Ø {price})',
+      noPrices: 'Aucun prix disponible',
+      warnFallbackSource: 'Prix issus d’une source de secours',
+      warnStaleData: 'Les prix ne sont peut-être pas à jour',
+      warnIncompleteData: 'Prix manquants pour une partie de la journée',
+      warnGeneric: 'Données peut-être incomplètes'
+    },
+    da: {
+      titleToday: 'Elpris i dag ({date})',
+      titleNext: 'Elpris næste {hours} t',
+      yAxis: 'Pris (EUR/kWh)',
+      bestPeriod: 'Bedste periode på {hours} t: {start} - {end} (Ø {price})',
+      noPrices: 'Ingen priser tilgængelige',
+      warnFallbackSource: 'Priser fra en reservekilde',
+      warnStaleData: 'Priserne kan være forældede',
+      warnIncompleteData: 'Der mangler priser for en del af i dag',
+      warnGeneric: 'Data kan være ufuldstændige'
+    },
+    nb: {
+      titleToday: 'Strømpris i dag ({date})',
+      titleNext: 'Strømpris neste {hours} t',
+      yAxis: 'Pris (EUR/kWh)',
+      bestPeriod: 'Beste periode på {hours} t: {start} - {end} (Ø {price})',
+      noPrices: 'Ingen priser tilgjengelig',
+      warnFallbackSource: 'Priser fra en reservekilde',
+      warnStaleData: 'Prisene kan være utdaterte',
+      warnIncompleteData: 'Det mangler priser for deler av i dag',
+      warnGeneric: 'Data kan være ufullstendige'
+    },
+    sv: {
+      titleToday: 'Elpris i dag ({date})',
+      titleNext: 'Elpris närmaste {hours} h',
+      yAxis: 'Pris (EUR/kWh)',
+      bestPeriod: 'Bästa perioden på {hours} h: {start} - {end} (Ø {price})',
+      noPrices: 'Inga priser tillgängliga',
+      warnFallbackSource: 'Priser från en reservkälla',
+      warnStaleData: 'Priserna kan vara inaktuella',
+      warnIncompleteData: 'Priser saknas för en del av i dag',
+      warnGeneric: 'Data kan vara ofullständiga'
+    }
+  };
+  const WARNING_KEYS = {
+    fallback_source: 'warnFallbackSource',
+    stale_data: 'warnStaleData',
+    incomplete_data: 'warnIncompleteData'
+  };
+
+  // Any of these can be null. Settings come from custom_fields_values because country and markup are also response keys
+  const chartId = {{ chart_id | json }};
+  const prices = [{% for item in data %}{ time: {{ item.time | json }}, price: {{ item.price | json }} },{% endfor %}];
+  const info = {{ info | json }} || {};
+  const bestPeriod = {{ bestPeriod | json }};
+  const warnings = {{ warnings | json }} || [];
+  // The API repeats a rejected value in its message, so no < may reach the page as script text
+  const message = {{ message | json | replace: '<', '<"+"' }};
+  const languageSetting = {{ trmnl.plugin_settings.custom_fields_values.language | json }};
+  const roundToSetting = {{ trmnl.plugin_settings.custom_fields_values.round_to | json }};
+  const deviceLocale = {{ trmnl.user.locale | json }};
+
+  function resolveLanguage(setting, locale) {
+    const chosen = String(setting ?? '').trim();
+    const source = chosen === '' || chosen.toLowerCase() === 'device' ? locale : chosen;
+    const code = String(source ?? '').trim().slice(0, 2).toLowerCase();
+    const language = code === 'nn' || code === 'no' ? 'nb' : code;
+    return STRINGS[language] ? language : 'en';
+  }
+
+  function fill(template, values) {
+    return template.replace(/\{(\w+)\}/g, (_, key) => values[key]);
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // The sign goes before the euro sign, and is a plain hyphen because some locales format a longer minus
+  function formatEuro(numberFormat, value) {
+    return (value < 0 ? '-' : '') + '€' + numberFormat.format(Math.abs(value));
+  }
+
+  // Quarter-hour data has bars about 2px wide, where a 10px pattern leaves only scattered dashes
+  function bestPeriodPattern(narrow) {
+    return {
+      pattern: {
+        path: {
+          d: narrow ? 'M 0 4 L 4 0 M -1 1 L 1 -1 M 3 5 L 5 3' : 'M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11',
+          stroke: '#000000',
+          strokeWidth: narrow ? 2 : 3
+        },
+        width: narrow ? 4 : 10,
+        height: narrow ? 4 : 10,
+        opacity: 0.8
+      }
+    };
+  }
+
+  window.renderDayAheadChart = function (sizes) {
+    const language = resolveLanguage(languageSetting, deviceLocale);
+    const strings = STRINGS[language];
+    const chartElement = document.getElementById(chartId);
+    const infoPanel = document.getElementById(chartId + '-info');
+    infoPanel.style.fontSize = sizes.infoSize;
+
+    if (prices.length === 0) {
+      infoPanel.innerHTML = [strings.noPrices, ...(message ? [escapeHtml(message)] : [])].join('<br>');
+      return;
+    }
+
+    const timeZone = info.timezone;
+    const timeFormat = new Intl.DateTimeFormat(language, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const dateFormat = new Intl.DateTimeFormat(language, { timeZone, day: 'numeric', month: 'short', hourCycle: 'h23' });
+
+    const lines = [];
+    if (bestPeriod) {
+      const parsedDecimals = parseInt(roundToSetting, 10);
+      const decimals = parsedDecimals >= 0 && parsedDecimals <= 10 ? parsedDecimals : 5;
+      const priceFormat = new Intl.NumberFormat(language, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+      lines.push(fill(strings.bestPeriod, {
+        hours: bestPeriod.hours,
+        start: timeFormat.format(new Date(bestPeriod.startTime)),
+        end: timeFormat.format(new Date(bestPeriod.endTime)),
+        price: formatEuro(priceFormat, bestPeriod.averagePrice)
+      }));
+    }
+    const notes = warnings.map(warning => strings[WARNING_KEYS[String(warning).split(':')[0].trim()] || 'warnGeneric']);
+    infoPanel.innerHTML = [...lines, ...new Set(notes)].join('<br>');
+
+    // Measured after filling the panel, because its text decides how much room is left for the chart
+    const slotHeight = chartElement.closest('.view')?.clientHeight;
+    const fittedHeight = slotHeight - infoPanel.offsetHeight - 10;
+    const height = fittedHeight > 0 ? fittedHeight : sizes.chartHeight;
+    chartElement.style.height = height + 'px';
+
+    const bestStart = bestPeriod ? new Date(bestPeriod.startTime).getTime() : null;
+    const bestEnd = bestPeriod ? new Date(bestPeriod.endTime).getTime() : null;
+    const points = prices.map(item => {
+      const time = new Date(item.time).getTime();
+      const isBest = bestPeriod && time >= bestStart && time < bestEnd;
+      return isBest ? { y: item.price, color: bestPeriodPattern(info.resolutionMinutes === 15) } : { y: item.price };
+    });
+
+    const title = info.type === 'today'
+      ? fill(strings.titleToday, { date: dateFormat.format(new Date(prices[0].time)) })
+      : fill(strings.titleNext, { hours: info.totalHours || Math.max(1, Math.round((prices.length * (info.resolutionMinutes || 60)) / 60)) });
+
+    const values = prices.map(item => item.price);
+    const maxPrice = Math.max(...values);
+    const minPrice = Math.min(...values);
+    const yMin = Math.floor(minPrice * 20) / 20;
+    const yMax = maxPrice > 0 ? Math.ceil(maxPrice * 20) / 20 : 0.05;
+    const axisPriceFormat = new Intl.NumberFormat(language, { maximumFractionDigits: 3 });
+
+    const draw = function () {
+      Highcharts.chart(chartId, {
+        chart: {
+          type: 'column',
+          height,
+          animation: false
+        },
+        title: {
+          text: title,
+          style: {
+            fontSize: sizes.titleSize,
+            fontWeight: 'bold',
+            color: '#000000'
+          }
+        },
+        xAxis: {
+          categories: prices.map(item => timeFormat.format(new Date(item.time))),
+          labels: {
+            rotation: -45,
+            step: Math.ceil(prices.length / sizes.maxLabels),
+            style: {
+              fontSize: sizes.axisSize,
+              color: '#000000'
+            }
+          }
+        },
+        yAxis: {
+          min: yMin,
+          max: yMax,
+          title: {
+            text: strings.yAxis,
+            style: {
+              color: '#000000'
+            }
+          },
+          labels: {
+            formatter: function () {
+              return formatEuro(axisPriceFormat, this.value);
+            },
+            style: {
+              fontSize: sizes.axisSize,
+              color: '#000000'
+            }
+          },
+          plotLines: [{
+            value: 0,
+            width: 1,
+            color: '#808080'
+          }]
+        },
+        series: [{
+          data: points,
+          color: '#000000',
+          animation: false
+        }],
+        credits: {
+          enabled: false
+        },
+        legend: {
+          enabled: false
+        },
+        plotOptions: {
+          column: {
+            borderWidth: 0
+          }
+        }
+      });
+    };
+
+    if (typeof Highcharts !== 'undefined') {
+      draw();
+    } else {
+      window.addEventListener('load', draw);
+    }
+  };
+})();
+</script>

@@ -5,7 +5,9 @@ const {
   validateCountry,
   enrichPricesWithCountryInfo,
   buildCountryResponse,
-  aggregateToHourly
+  aggregateToHourly,
+  parseBestPeriodHours,
+  findBestPeriod
 } = require('../utils/helpers');
 
 describe('Helper Functions', () => {
@@ -274,5 +276,81 @@ describe('enrichPricesWithCountryInfo hour', () => {
 
   test('is in the country timezone', () => {
     expect(hourOf('dk', '2026-10-31T13:15:00.000Z')).toBe('14:15');
+  });
+
+  describe('parseBestPeriodHours', () => {
+    test('is undefined when absent or empty', () => {
+      expect(parseBestPeriodHours({})).toBeUndefined();
+      expect(parseBestPeriodHours({ bestPeriodHours: '' })).toBeUndefined();
+    });
+
+    test('parses a whole number of hours', () => {
+      expect(parseBestPeriodHours({ bestPeriodHours: '4' })).toBe(4);
+    });
+  });
+
+  describe('findBestPeriod', () => {
+    const START = '2026-11-02T00:00:00Z';
+    const iso = value => new Date(value).toISOString();
+    const slots = (start, minutes, values) =>
+      values.map((price, i) => ({
+        time: new Date(new Date(start).getTime() + i * minutes * 60000).toISOString(),
+        price
+      }));
+
+    test.each([
+      ['repeated', [0, 30, 30, 45]],
+      ['out of order', [0, 30, 15, 45]]
+    ])('skips a window whose ends fit but whose middle slots are %s', (_, offsets) => {
+      const at = minutes => new Date(new Date(START).getTime() + minutes * 60000).toISOString();
+      const prices = offsets.map(minutes => ({ time: at(minutes), price: 1 }));
+      expect(findBestPeriod(prices, 1, 15, 5)).toBeNull();
+      const later = [120, 135, 150, 165].map(minutes => ({ time: at(minutes), price: 2 }));
+      expect(findBestPeriod([...prices, ...later], 1, 15, 5).startTime).toBe(at(120));
+    });
+
+    test('finds the cheapest consecutive window', () => {
+      const prices = slots('2026-11-02T00:00:00Z', 60, [5, 5, 1, 1, 5, 5]);
+      expect(findBestPeriod(prices, 2, 60, 5)).toEqual({
+        hours: 2,
+        startTime: '2026-11-02T02:00:00.000Z',
+        endTime: '2026-11-02T04:00:00.000Z',
+        averagePrice: 1,
+        intervals: 2
+      });
+    });
+
+    test('hours become slots from the actual resolution', () => {
+      expect(findBestPeriod(slots(START, 15, Array(8).fill(1)), 2, 15, 5).intervals).toBe(8);
+      expect(findBestPeriod(slots(START, 60, Array(8).fill(1)), 2, 60, 5).intervals).toBe(2);
+    });
+
+    test('the earliest wins a tie', () => {
+      expect(findBestPeriod(slots(START, 60, [1, 1, 9, 1, 1]), 2, 60, 5).startTime).toBe(iso(START));
+    });
+
+    test('the earliest wins a tie despite floating-point averages', () => {
+      const prices = slots(START, 60, [0.1, 0.2, 0.3, 0.3, 0.2, 0.1]);
+      expect(findBestPeriod(prices, 3, 60, 5).startTime).toBe(iso(START));
+    });
+
+    test('a window across a gap does not count', () => {
+      const prices = [...slots('2026-11-02T00:00:00Z', 60, [9, 1]), ...slots('2026-11-02T03:00:00Z', 60, [1, 9])];
+      expect(findBestPeriod(prices, 2, 60, 5).startTime).toBe('2026-11-02T00:00:00.000Z');
+    });
+
+    test('returns null when no window fits', () => {
+      expect(findBestPeriod(slots(START, 60, [1, 1, 1]), 4, 60, 5)).toBeNull();
+      expect(findBestPeriod([], 1, 60, 5)).toBeNull();
+    });
+
+    test('a window across the autumn clock change is consecutive', () => {
+      const prices = slots('2026-10-24T22:00:00Z', 15, Array(100).fill(1)); // Amsterdam, 100 quarter-hours that day
+      expect(findBestPeriod(prices, 25, 15, 5).intervals).toBe(100);
+    });
+
+    test('rounds the average to roundTo', () => {
+      expect(findBestPeriod(slots(START, 60, [0.1, 0.2]), 2, 60, 2).averagePrice).toBe(0.15);
+    });
   });
 });

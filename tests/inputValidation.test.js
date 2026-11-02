@@ -24,6 +24,11 @@ const INVALID_QUERIES = [
   'roundTo=400',
   'roundTo=-1',
   'roundTo=2.5',
+  'bestPeriodHours=0',
+  'bestPeriodHours=25',
+  'bestPeriodHours=2.5',
+  'bestPeriodHours=abc',
+  'bestPeriodHours=4&bestPeriodHours=5',
   'autoVat=yes',
   'includeVat=1'
 ];
