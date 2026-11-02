@@ -40,7 +40,7 @@ function buildVariables({ response, fieldValues, user, mergeOrder }) {
 }
 
 function createElement(id, slotHeight) {
-  const slot = slotHeight ? { clientHeight: slotHeight, offsetHeight: slotHeight } : null;
+  const slot = slotHeight ? { clientHeight: slotHeight, offsetHeight: slotHeight, dataset: {} } : null;
   return {
     id,
     innerHTML: '',

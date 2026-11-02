@@ -1,7 +1,14 @@
 <script src="https://trmnl.com/js/highcharts/12.3.0/highcharts.js"></script>
 <script src="https://trmnl.com/js/highcharts/12.3.0/pattern-fill.js"></script>
 {% assign chart_id = 'chart' | append_random %}
-<div id="{{ chart_id }}" style="width: 100%;"></div>
+<style>
+  /* The chart paints its own black and white, which TRMNL's dark mode can't reach: that only remaps framework colours.
+     This is CSS because TRMNL's editor switch adds the class after the chart is drawn. */
+  .screen--dark-mode .day-ahead-chart { filter: invert(1); }
+  /* TRMNL's dark mode is one value for the whole recipe, so the theme setting gives each install its own choice. */
+  .screen:not(.screen--dark-mode) [data-day-ahead-theme="dark"] { filter: invert(1); background: #ffffff; }
+</style>
+<div id="{{ chart_id }}" class="day-ahead-chart" style="width: 100%;"></div>
 <div id="{{ chart_id }}-info" style="width: 100%; text-align: center; margin-top: 10px; font-weight: bold;"></div>
 <script type="text/javascript">
 (function () {
@@ -15,7 +22,9 @@
       warnFallbackSource: 'Prices from a backup source',
       warnStaleData: 'Prices may be out of date',
       warnIncompleteData: 'Prices missing for part of today',
-      warnGeneric: 'Data may be incomplete'
+      warnGeneric: 'Data may be incomplete',
+      windSolarLine: 'Line: forecast wind + solar, % of demand',
+      warnWindSolarUnavailable: 'Wind and solar forecast unavailable'
     },
     nl: {
       titleToday: 'Stroomprijs vandaag ({date})',
@@ -26,7 +35,9 @@
       warnFallbackSource: 'Prijzen van een reservebron',
       warnStaleData: 'Prijzen zijn mogelijk verouderd',
       warnIncompleteData: 'Prijzen ontbreken voor een deel van vandaag',
-      warnGeneric: 'Gegevens zijn mogelijk onvolledig'
+      warnGeneric: 'Gegevens zijn mogelijk onvolledig',
+      windSolarLine: 'Lijn: verwachte wind + zon, % van de vraag',
+      warnWindSolarUnavailable: 'Wind- en zonneverwachting niet beschikbaar'
     },
     de: {
       titleToday: 'Strompreis heute ({date})',
@@ -37,7 +48,9 @@
       warnFallbackSource: 'Preise aus einer Ersatzquelle',
       warnStaleData: 'Preise sind möglicherweise veraltet',
       warnIncompleteData: 'Für einen Teil von heute fehlen Preise',
-      warnGeneric: 'Daten sind möglicherweise unvollständig'
+      warnGeneric: 'Daten sind möglicherweise unvollständig',
+      windSolarLine: 'Linie: Prognose Wind + Solar, % der Nachfrage',
+      warnWindSolarUnavailable: 'Wind- und Solarprognose nicht verfügbar'
     },
     fr: {
       titleToday: 'Prix de l’électricité aujourd’hui ({date})',
@@ -48,7 +61,9 @@
       warnFallbackSource: 'Prix issus d’une source de secours',
       warnStaleData: 'Les prix ne sont peut-être pas à jour',
       warnIncompleteData: 'Prix manquants pour une partie de la journée',
-      warnGeneric: 'Données peut-être incomplètes'
+      warnGeneric: 'Données peut-être incomplètes',
+      windSolarLine: 'Ligne : prévision éolien + solaire, % de la demande',
+      warnWindSolarUnavailable: 'Prévision éolien et solaire indisponible'
     },
     da: {
       titleToday: 'Elpris i dag ({date})',
@@ -59,7 +74,9 @@
       warnFallbackSource: 'Priser fra en reservekilde',
       warnStaleData: 'Priserne kan være forældede',
       warnIncompleteData: 'Der mangler priser for en del af i dag',
-      warnGeneric: 'Data kan være ufuldstændige'
+      warnGeneric: 'Data kan være ufuldstændige',
+      windSolarLine: 'Linje: forventet vind + sol, % af forbruget',
+      warnWindSolarUnavailable: 'Vind- og solprognose ikke tilgængelig'
     },
     nb: {
       titleToday: 'Strømpris i dag ({date})',
@@ -70,7 +87,9 @@
       warnFallbackSource: 'Priser fra en reservekilde',
       warnStaleData: 'Prisene kan være utdaterte',
       warnIncompleteData: 'Det mangler priser for deler av i dag',
-      warnGeneric: 'Data kan være ufullstendige'
+      warnGeneric: 'Data kan være ufullstendige',
+      windSolarLine: 'Linje: forventet vind + sol, % av forbruket',
+      warnWindSolarUnavailable: 'Vind- og solprognose ikke tilgjengelig'
     },
     sv: {
       titleToday: 'Elpris i dag ({date})',
@@ -81,18 +100,21 @@
       warnFallbackSource: 'Priser från en reservkälla',
       warnStaleData: 'Priserna kan vara inaktuella',
       warnIncompleteData: 'Priser saknas för en del av i dag',
-      warnGeneric: 'Data kan vara ofullständiga'
+      warnGeneric: 'Data kan vara ofullständiga',
+      windSolarLine: 'Linje: prognos vind + sol, % av efterfrågan',
+      warnWindSolarUnavailable: 'Vind- och solprognos inte tillgänglig'
     }
   };
   const WARNING_KEYS = {
     fallback_source: 'warnFallbackSource',
     stale_data: 'warnStaleData',
-    incomplete_data: 'warnIncompleteData'
+    incomplete_data: 'warnIncompleteData',
+    wind_solar_unavailable: 'warnWindSolarUnavailable'
   };
 
   // Any of these can be null. Settings come from custom_fields_values because country and markup are also response keys
   const chartId = {{ chart_id | json }};
-  const prices = [{% for item in data %}{ time: {{ item.time | json }}, price: {{ item.price | json }} },{% endfor %}];
+  const prices = [{% for item in data %}{ time: {{ item.time | json }}, price: {{ item.price | json }}, windSolarShare: {{ item.windSolarShare | json }} },{% endfor %}];
   const info = {{ info | json }} || {};
   const bestPeriod = {{ bestPeriod | json }};
   const warnings = {{ warnings | json }} || [];
@@ -101,6 +123,7 @@
   const languageSetting = {{ trmnl.plugin_settings.custom_fields_values.language | json }};
   const roundToSetting = {{ trmnl.plugin_settings.custom_fields_values.round_to | json }};
   const deviceLocale = {{ trmnl.user.locale | json }};
+  const themeSetting = {{ trmnl.plugin_settings.custom_fields_values.theme | json }};
 
   function resolveLanguage(setting, locale) {
     const chosen = String(setting ?? '').trim();
@@ -139,12 +162,18 @@
     };
   }
 
+  function applyTheme(chartElement) {
+    const view = chartElement.closest('.view');
+    if (view && String(themeSetting ?? '').toLowerCase() === 'dark') view.dataset.dayAheadTheme = 'dark';
+  }
+
   window.renderDayAheadChart = function (sizes) {
     const language = resolveLanguage(languageSetting, deviceLocale);
     const strings = STRINGS[language];
     const chartElement = document.getElementById(chartId);
     const infoPanel = document.getElementById(chartId + '-info');
     infoPanel.style.fontSize = sizes.infoSize;
+    applyTheme(chartElement);
 
     if (prices.length === 0) {
       infoPanel.innerHTML = [strings.noPrices, ...(message ? [escapeHtml(message)] : [])].join('<br>');
@@ -170,6 +199,9 @@
         price: formatEuro(priceFormat, bestPeriod.averagePrice)
       }));
     }
+    const windSolarShares = prices.map(item => item.windSolarShare);
+    const hasWindSolar = windSolarShares.some(share => share !== null);
+    if (hasWindSolar) lines.push(strings.windSolarLine);
     const notes = warnings.map(warning => strings[WARNING_KEYS[String(warning).split(':')[0].trim()] || 'warnGeneric']);
     infoPanel.innerHTML = [...lines, ...new Set(notes)].join('<br>');
 
@@ -197,6 +229,45 @@
     const yMin = Math.floor(minPrice * 20) / 20;
     const yMax = maxPrice > 0 ? Math.ceil(maxPrice * 20) / 20 : 0.05;
     const axisPriceFormat = new Intl.NumberFormat(language, { maximumFractionDigits: 3 });
+    const axisLabelStyle = { fontSize: sizes.axisSize, color: '#000000' };
+    const priceAxis = {
+      min: yMin,
+      max: yMax,
+      title: {
+        text: strings.yAxis,
+        style: {
+          color: '#000000'
+        }
+      },
+      labels: {
+        formatter: function () {
+          return formatEuro(axisPriceFormat, this.value);
+        },
+        style: axisLabelStyle
+      },
+      plotLines: [{
+        value: 0,
+        width: 1,
+        color: '#808080'
+      }]
+    };
+    const windSolarAxis = {
+      opposite: true,
+      min: 0,
+      gridLineWidth: 0,
+      title: { text: null },
+      labels: { format: '{value}%', style: axisLabelStyle }
+    };
+    // Bars are solid black on a 1-bit screen, so the line needs a white edge to stay visible over them
+    const windSolarSeries = (color, lineWidth) => ({
+      type: 'line',
+      data: windSolarShares,
+      yAxis: 1,
+      color,
+      lineWidth,
+      marker: { enabled: false },
+      animation: false
+    });
 
     const draw = function () {
       Highcharts.chart(chartId, {
@@ -224,35 +295,15 @@
             }
           }
         },
-        yAxis: {
-          min: yMin,
-          max: yMax,
-          title: {
-            text: strings.yAxis,
-            style: {
-              color: '#000000'
-            }
+        yAxis: hasWindSolar ? [priceAxis, windSolarAxis] : priceAxis,
+        series: [
+          {
+            data: points,
+            color: '#000000',
+            animation: false
           },
-          labels: {
-            formatter: function () {
-              return formatEuro(axisPriceFormat, this.value);
-            },
-            style: {
-              fontSize: sizes.axisSize,
-              color: '#000000'
-            }
-          },
-          plotLines: [{
-            value: 0,
-            width: 1,
-            color: '#808080'
-          }]
-        },
-        series: [{
-          data: points,
-          color: '#000000',
-          animation: false
-        }],
+          ...(hasWindSolar ? [windSolarSeries('#ffffff', 5), windSolarSeries('#000000', 2)] : [])
+        ],
         credits: {
           enabled: false
         },

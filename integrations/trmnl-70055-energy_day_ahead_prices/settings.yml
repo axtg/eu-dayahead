@@ -4,10 +4,10 @@ no_screen_padding: 'yes'
 dark_mode: 'no'
 static_data: ''
 polling_verb: get
-framework_version: 2.3.7
+framework_version: 3.4.0
 serverless_language: ''
 refresh_interval_floor:
-polling_url: "https://dap.xadi.eu/api/{{ country }}/{% assign tf = timeframe | downcase %}{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}"
+polling_url: "https://dap.xadi.eu/api/{{ country }}/{% assign tf = timeframe | downcase %}{% if tf == 'next12' %}next/12{% elsif tf == 'nextall' %}next/48{% else %}{{ tf }}{% endif %}?interval={{ resolution }}&markup={{ markup }}&variableMarkup={{ variable_markup }}&roundTo={{ round_to }}&bestPeriodHours={{ best_period_hours | default: 4 }}&vat={% if vat == nil or vat == '' %}auto{% else %}{{ vat }}{% endif %}{% if wind_solar == 'true' %}&includeWindSolar=true{% endif %}"
 polling_headers: ''
 polling_body: ''
 id: 70055
@@ -112,6 +112,24 @@ custom_fields:
   - 8 hours: '8'
   description: Length of the cheapest period to highlight
   default: '4'
+  optional: true
+- keyname: wind_solar
+  name: Wind and solar line
+  field_type: select
+  options:
+  - Hide: 'false'
+  - Show: 'true'
+  description: 'Adds a line with forecast wind and solar production as a share of demand. Not a renewable or CO₂ figure: hydro and nuclear aren''t counted.'
+  default: 'false'
+  optional: true
+- keyname: theme
+  name: Theme
+  field_type: select
+  options:
+  - Light: 'light'
+  - Dark: 'dark'
+  description: Dark shows the chart in white on black
+  default: 'light'
   optional: true
 - keyname: language
   name: Language
