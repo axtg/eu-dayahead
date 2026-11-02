@@ -6,6 +6,8 @@
     vatPercent: document.getElementById('vatPercent'),
     timeframe: document.getElementById('timeframe'),
     interval: document.getElementById('interval'),
+    windSolar: document.getElementById('windSolar'),
+    windSolarNote: document.getElementById('windSolarNote'),
     status: document.getElementById('statusMessage')
   };
 
@@ -26,7 +28,7 @@
     return isFinite(n) ? n / 100 : 0;
   }
 
-  function buildEndpoint({ country, timeframe, markupCents, vatPercent, interval }) {
+  function buildEndpoint({ country, timeframe, markupCents, vatPercent, interval, includeWindSolar }) {
     const tfPath = timeframe === 'next24h' ? 'next24h' : 'today';
     const base = `/api/${country}/${tfPath}`;
 
@@ -36,6 +38,7 @@
     if (markup > 0) params.set('markup', markup.toString());
     if (vat > 0) params.set('vat', vat.toString());
     if (interval && interval !== '60M') params.set('interval', interval);
+    if (includeWindSolar) params.set('includeWindSolar', 'true');
 
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
@@ -305,9 +308,11 @@
     };
   }
 
-  function renderChart(labels, series, unit, resolutionMinutes = 60, nowMarkerTimes = null) {
+  const WIND_SOLAR_LABEL = 'Wind + solar';
+
+  function renderChart(labels, series, unit, resolutionMinutes = 60, nowMarkerTimes = null, windSolarSeries = null) {
     const ctx = document.getElementById('priceChart');
-    lastChartArgs = [labels, series, unit, resolutionMinutes, nowMarkerTimes];
+    lastChartArgs = [labels, series, unit, resolutionMinutes, nowMarkerTimes, windSolarSeries];
 
     if (chart) {
       chart.destroy();
@@ -351,18 +356,35 @@
             pointBackgroundColor: pointBackground,
             pointRadius,
             borderWidth: 2
-          }
+          },
+          ...(windSolarSeries
+            ? [
+              {
+                label: WIND_SOLAR_LABEL,
+                data: windSolarSeries,
+                yAxisID: 'windSolar',
+                borderColor: dark ? '#34d399' : '#059669',
+                backgroundColor: dark ? '#34d399' : '#059669',
+                tension: 0.35,
+                pointRadius: 0,
+                borderWidth: 2
+              }
+            ]
+            : [])
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // The share line has no points to hover over, so show both values for the hovered time.
+        ...(windSolarSeries && { interaction: { mode: 'index', intersect: false } }),
         plugins: {
-          legend: { display: false },
+          legend: { display: Boolean(windSolarSeries), labels: { boxHeight: 2 } },
           tooltip: {
             callbacks: {
               label: (ctx) => {
                 const v = ctx.parsed.y;
+                if (ctx.dataset.yAxisID === 'windSolar') return ` ${WIND_SOLAR_LABEL}: ${v.toFixed(1)}%`;
                 return ` ${v.toFixed(5)} ${unit}`;
               }
             }
@@ -384,7 +406,17 @@
           y: {
             title: { display: true, text: unit },
             ticks: { precision: 5 }
-          }
+          },
+          ...(windSolarSeries && {
+            windSolar: {
+              position: 'right',
+              beginAtZero: true,
+              grid: { drawOnChartArea: false },
+              // Phones have no room for it beside the chart.
+              title: { display: window.innerWidth >= 640, text: '% of forecast demand' },
+              ticks: { callback: value => `${value}%` }
+            }
+          })
         }
       }
     });
@@ -427,7 +459,8 @@
   const WARNING_MESSAGES = {
     fallback_source: 'These prices come from our fallback source (Stekker), so they may be less accurate.',
     stale_data: 'We couldn\'t refresh prices just now, so these may be out of date.',
-    incomplete_data: 'Prices are missing for part of today.'
+    incomplete_data: 'Prices are missing for part of today.',
+    wind_solar_unavailable: 'The wind and solar forecast is unavailable right now. Prices aren\'t affected.'
   };
 
   function setNotice(kind, message) {
@@ -460,8 +493,10 @@
       const markupCents = els.markupCents.value || '0';
       const vatPercent = els.vatPercent.value || '0';
       const interval = els.interval.value || '60M';
+      const includeWindSolar = els.windSolar.checked;
+      els.windSolarNote.classList.toggle('hidden', !includeWindSolar);
 
-      const endpoint = buildEndpoint({ country, timeframe, markupCents, vatPercent, interval });
+      const endpoint = buildEndpoint({ country, timeframe, markupCents, vatPercent, interval, includeWindSolar });
       setApiUrlDisplay(endpoint);
 
       const payload = await fetchJSON(endpoint);
@@ -471,6 +506,7 @@
 
       const labels = (payload?.data || []).map(p => p.hour ?? new Date(p.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       const series = (payload?.data || []).map(p => Number(p.price));
+      const windSolarSeries = includeWindSolar ? payload.data.map(p => p.windSolarShare ?? null) : null;
 
       if (series.length === 0) {
         clearChart();
@@ -481,7 +517,7 @@
       const nowMarkerTimes = payload?.info?.type === 'today' ? payload.data.map(p => p.time) : null;
       setNotice('warning', warningMessages(payload?.warnings));
       updatePriceStats(labels, series, unit);
-      renderChart(labels, series, unit, resolutionMinutes, nowMarkerTimes);
+      renderChart(labels, series, unit, resolutionMinutes, nowMarkerTimes, windSolarSeries);
     } catch (err) {
       console.error(err);
       if (requestId !== latestRequestId) return;
@@ -523,6 +559,7 @@
     });
     els.markupCents.addEventListener('input', () => { saveState(); refresh(); });
     els.vatPercent.addEventListener('input', () => { saveState(); refresh(); });
+    els.windSolar.addEventListener('change', () => { saveState(); refresh(); });
 
     // Clear buttons. Zero rather than empty, because an empty saved VAT falls back to the country default on reload.
     [['clearVat', els.vatPercent], ['clearMarkup', els.markupCents]].forEach(([id, input]) => {
@@ -658,7 +695,8 @@
         timeframe: els.timeframe.value,
         markupCents: els.markupCents.value,
         vatPercent: els.vatPercent.value,
-        interval: els.interval.value
+        interval: els.interval.value,
+        windSolar: els.windSolar.checked
       };
       localStorage.setItem(LS_KEY, JSON.stringify(state));
     } catch {
@@ -700,6 +738,7 @@
       setSwitchActive(els.timeframe.value);
       els.interval.value = saved.interval || '60M';
       setIntervalActive(els.interval.value);
+      els.windSolar.checked = saved.windSolar === true;
     } else {
       // Default to next24h and Netherlands VAT
       els.timeframe.value = 'next24h';

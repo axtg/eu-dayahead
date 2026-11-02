@@ -17,7 +17,9 @@ const STRING_KEYS = [
   'warnFallbackSource',
   'warnStaleData',
   'warnIncompleteData',
-  'warnGeneric'
+  'warnGeneric',
+  'windSolarLine',
+  'warnWindSolarUnavailable'
 ];
 const SIZES = {
   full: { chartHeight: 400, titleSize: '18px', axisSize: '13px', infoSize: '16px', maxLabels: 24 },
@@ -60,7 +62,8 @@ const formatTime = (language, timezone, time) =>
 
 describe('settings', () => {
   test('adds the new fields as optional', () => {
-    for (const key of ['variable_markup', 'round_to', 'best_period_hours', 'language']) {
+    const keys = ['variable_markup', 'round_to', 'best_period_hours', 'language', 'wind_solar', 'theme'];
+    for (const key of keys) {
       expect(field(key).optional).toBe(true);
     }
   });
@@ -80,7 +83,8 @@ describe('settings', () => {
 
   test('select option values are quoted in the raw text', () => {
     const lines = readFileSync(SETTINGS_PATH, 'utf8').split('\n');
-    for (const key of ['country', 'timeframe', 'round_to', 'best_period_hours', 'language']) {
+    const keys = ['country', 'timeframe', 'round_to', 'best_period_hours', 'language', 'wind_solar', 'theme'];
+    for (const key of keys) {
       const start = lines.findIndex(line => line === `- keyname: ${key}`);
       const optionsAt = lines.indexOf('  options:', start);
       const values = [];
@@ -92,6 +96,21 @@ describe('settings', () => {
         expect(value).toMatch(/^'[^']+'$/);
       }
     }
+  });
+
+  test('the wind and solar line is off unless chosen', () => {
+    expect(optionValues('wind_solar')).toEqual(['false', 'true']);
+    expect(field('wind_solar').default).toBe('false');
+    expect(field('wind_solar').description).toMatch(/not a renewable or CO₂ figure/i);
+  });
+
+  test('the theme stays light unless chosen', () => {
+    expect(optionValues('theme')).toEqual(['light', 'dark']);
+    expect(field('theme').default).toBe('light');
+  });
+
+  test('the recipe-wide dark mode stays off, because it would change every install', () => {
+    expect(settings.dark_mode).toBe('no');
   });
 
   test('country options are all 9, NL first and default, in lower case', () => {
@@ -134,8 +153,8 @@ describe('settings', () => {
     expect(field('markup').description).toContain('0.12 = 12 cents');
   });
 
-  test('framework_version and refresh_interval are unchanged', () => {
-    expect(settings.framework_version).toBe('2.3.7');
+  test('framework_version matches the published recipe, and refresh_interval is unchanged', () => {
+    expect(settings.framework_version).toBe('3.4.0');
     expect(settings.refresh_interval).toBe(120);
   });
 
@@ -197,6 +216,17 @@ describe('polling URL', () => {
     expect(url.searchParams.get('bestPeriodHours')).toBe('6');
   });
 
+  test('asks for the wind and solar share when chosen', async () => {
+    const url = new URL(await renderPollingUrl({ ...BASE_FIELDS, wind_solar: 'true' }));
+    expect(url.searchParams.get('includeWindSolar')).toBe('true');
+  });
+
+  test.each(['false', '', undefined])('wind_solar %j leaves the URL as it was', async value => {
+    const fields = { ...BASE_FIELDS, vat: 0 };
+    await expect(renderPollingUrl({ ...fields, wind_solar: value })).resolves.toBe(await renderPollingUrl(fields));
+    await expect(renderPollingUrl({ ...fields, wind_solar: value })).resolves.not.toContain('includeWindSolar');
+  });
+
   test('a blank best period length sends 4', async () => {
     const url = new URL(await renderPollingUrl({ ...BASE_FIELDS, best_period_hours: '' }));
     expect(url.searchParams.get('bestPeriodHours')).toBe('4');
@@ -252,6 +282,149 @@ describe('language', () => {
 
   test('an unsupported language setting gives English', async () => {
     await expect(yAxisFor({ language: 'pt' }, 'de')).resolves.toBe(STRINGS.en.yAxis);
+  });
+});
+
+const withShares = (response, shareFor = i => 20 + i) => ({
+  ...response,
+  data: response.data.map((item, i) => ({ ...item, windSolarShare: shareFor(i) }))
+});
+
+describe.each(LAYOUTS)('layout %s', layout => {
+  test('draws no line and adds no axis without shares', async () => {
+    const { chart, elements } = await render(layout, fixture('nl-next24h'));
+    expect(chart.series).toHaveLength(1);
+    expect(Array.isArray(chart.yAxis)).toBe(false);
+    expect(elements.info.innerHTML).not.toContain(STRINGS.en.windSolarLine);
+  });
+
+  test('plots the share as a line on its own axis, and says what it is', async () => {
+    const response = withShares(fixture('nl-next24h'));
+    const { chart, elements } = await render(layout, response);
+    const line = chart.series[chart.series.length - 1];
+    expect(chart.series[0].type).toBeUndefined();
+    expect(line.type).toBe('line');
+    expect(line.data).toEqual(response.data.map(item => item.windSolarShare));
+    expect(line.yAxis).toBe(1);
+    expect(line.animation).toBe(false);
+    expect(chart.yAxis[1].opposite).toBe(true);
+    expect(chart.yAxis[1].min).toBe(0);
+    expect(chart.yAxis[1].labels.format).toBe('{value}%');
+    expect(chart.yAxis[1].labels.style.fontSize).toBe(SIZES[layout].axisSize);
+    expect(elements.info.innerHTML).toContain(STRINGS.en.windSolarLine);
+  });
+});
+
+describe('dark mode', () => {
+  const viewOf = result => result.elements.chart.closest('.view');
+  const renderedCss = async fields => {
+    const fieldValues = { language: 'en', ...fields };
+    const html = await renderHtml('full', { response: fixture('nl-next24h'), fieldValues });
+    return html.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
+  };
+
+  // In CSS rather than a check at render, because TRMNL's editor switch adds its class after the chart is drawn.
+  test('the chart inverts whenever the screen is in dark mode, whatever the theme', async () => {
+    expect(await renderedCss({})).toMatch(/\.screen--dark-mode \.day-ahead-chart\s*\{[^}]*filter:\s*invert\(1\)/);
+  });
+
+  test('the chart div carries the class the rule targets', async () => {
+    const html = await renderHtml('full', { response: fixture('nl-next24h'), fieldValues: { language: 'en' } });
+    expect(html).toMatch(/<div id="chart-test" class="day-ahead-chart"/);
+  });
+
+  test('the dark theme inverts the slot only while the screen is not in dark mode', async () => {
+    expect(await renderedCss({})).toMatch(
+      /\.screen:not\(\.screen--dark-mode\) \[data-day-ahead-theme="dark"\]\s*\{[^}]*filter:\s*invert\(1\)/
+    );
+  });
+
+  test.each(['dark', 'DARK'])('theme %s marks the slot', async theme => {
+    const result = await render('full', fixture('nl-next24h'), { language: 'en', theme }, { slotHeight: 480 });
+    expect(viewOf(result).dataset.dayAheadTheme).toBe('dark');
+  });
+
+  test.each([[{}], [{ theme: '' }], [{ theme: 'light' }]])('%j leaves the slot unmarked', async fields => {
+    const result = await render('full', fixture('nl-next24h'), { language: 'en', ...fields }, { slotHeight: 480 });
+    expect(viewOf(result).dataset.dayAheadTheme).toBeUndefined();
+  });
+
+  test('also marks the slot when there are no prices', async () => {
+    const result = await render('full', { data: [] }, { language: 'en', theme: 'dark' }, { slotHeight: 480 });
+    expect(viewOf(result).dataset.dayAheadTheme).toBe('dark');
+  });
+
+  test('a render without a slot still draws', async () => {
+    const { chart } = await render('full', fixture('nl-next24h'), { language: 'en', theme: 'dark' });
+    expect(chart).not.toBeNull();
+  });
+
+  test('does not change the prices or the polling URL', async () => {
+    const dark = await render('full', fixture('nl-next24h'), { language: 'en', theme: 'dark' });
+    const light = await render('full', fixture('nl-next24h'));
+    expect(dark.chart).toEqual(expect.objectContaining({ series: light.chart.series }));
+    const url = await renderPollingUrl({ ...BASE_FIELDS, theme: 'dark' });
+    expect(url).toBe(await renderPollingUrl(BASE_FIELDS));
+  });
+});
+
+describe('wind and solar line', () => {
+  test('stays visible over black bars with a white halo beneath it', async () => {
+    const { chart } = await render('full', withShares(fixture('nl-next24h')));
+    const [, halo, line] = chart.series;
+    expect(halo.color).toBe('#ffffff');
+    expect(line.color).toBe('#000000');
+    expect(halo.lineWidth).toBeGreaterThan(line.lineWidth);
+    expect(halo.data).toEqual(line.data);
+    expect(halo.marker.enabled).toBe(false);
+    expect(line.marker.enabled).toBe(false);
+  });
+
+  test('keeps the price axis and bars as they are', async () => {
+    const plain = await render('full', fixture('nl-next24h'));
+    const { chart } = await render('full', withShares(fixture('nl-next24h')));
+    expect(chart.series[0].data).toEqual(plain.chart.series[0].data);
+    expect(chart.yAxis[0].min).toBe(plain.chart.yAxis.min);
+    expect(chart.yAxis[0].max).toBe(plain.chart.yAxis.max);
+  });
+
+  test('leaves a gap where no forecast is published yet', async () => {
+    const response = withShares(fixture('nl-next24h'), i => (i < 10 ? 30 : null));
+    const { chart } = await render('full', response);
+    const line = chart.series[chart.series.length - 1];
+    expect(line.data[9]).toBe(30);
+    expect(line.data[10]).toBeNull();
+    expect(line.connectNulls).toBeFalsy();
+  });
+
+  test('draws nothing when every share is null', async () => {
+    const response = withShares(fixture('nl-next24h'), () => null);
+    const { chart, elements } = await render('full', response);
+    expect(chart.series).toHaveLength(1);
+    expect(Array.isArray(chart.yAxis)).toBe(false);
+    expect(elements.info.innerHTML).not.toContain(STRINGS.en.windSolarLine);
+  });
+
+  test('an unavailable forecast gets its own note, not the data warning', async () => {
+    const response = {
+      ...withShares(fixture('nl-next24h'), () => null),
+      warnings: ['wind_solar_unavailable: the wind and solar forecast could not be fetched in time']
+    };
+    for (const language of LANGUAGES) {
+      const { elements } = await render('full', response, { language });
+      expect(elements.info.innerHTML).toContain(STRINGS[language].warnWindSolarUnavailable);
+      expect(elements.info.innerHTML).not.toContain(STRINGS[language].warnGeneric);
+    }
+  });
+
+  test('a share of 0 still draws', async () => {
+    const { chart } = await render('full', withShares(fixture('nl-next24h'), () => 0));
+    expect(chart.series).toHaveLength(3);
+  });
+
+  test.each(LANGUAGES)('explains the line in %s', async language => {
+    const { elements } = await render('full', withShares(fixture('nl-next24h')), { language });
+    expect(elements.info.innerHTML).toContain(STRINGS[language].windSolarLine);
   });
 });
 

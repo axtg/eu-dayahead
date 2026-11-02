@@ -29,7 +29,25 @@ function quarterHourly() {
   return { ...base, data, info: { ...base.info, totalIntervals: 96, resolutionMinutes: 15 } };
 }
 
+// Follows a typical day: high around midday, with the forecast ending part-way through the data
+function withWindSolar(response, publishedSlots = response.data.length) {
+  const slots = response.data.length;
+  const share = i => Math.round(35 + 30 * Math.sin((i / slots) * Math.PI * 3));
+  return {
+    ...response,
+    data: response.data.map((item, i) => ({ ...item, windSolarShare: i < publishedSlots ? share(i) : null }))
+  };
+}
+
 const CASES = [
+  { name: 'dark', response: withWindSolar(fixture('nl-next24h')), language: 'nl', fields: { theme: 'dark' } },
+  { name: 'dark-q15', response: withWindSolar(quarterHourly()), language: 'en', fields: { theme: 'dark' } },
+  { name: 'dark-plain', response: fixture('nl-next24h'), language: 'en', fields: { theme: 'dark' } },
+  { name: 'dark-empty', response: { data: [], message: 'No prices' }, language: 'en', fields: { theme: 'dark' } },
+  { name: 'wind-solar', response: withWindSolar(fixture('nl-next24h')), language: 'nl' },
+  { name: 'wind-solar-q15', response: withWindSolar(quarterHourly()), language: 'en' },
+  { name: 'wind-solar-negative', response: withWindSolar(fixture('nl-next24h-negative')), language: 'en' },
+  { name: 'wind-solar-gap', response: withWindSolar(fixture('nl-next24h'), 14), language: 'fr' },
   { name: 'nl', response: fixture('nl-next24h'), language: 'nl' },
   { name: 'nl-today', response: fixture('nl-today'), language: 'nl' },
   { name: 'de', response: fixture('de-next24h'), language: 'de' },
@@ -61,7 +79,7 @@ async function main() {
     for (const [layout, size] of Object.entries(LAYOUTS)) {
       const body = await renderHtml(layout, {
         response: testCase.response,
-        fieldValues: { language: testCase.language, round_to: '3' },
+        fieldValues: { language: testCase.language, round_to: '3', ...testCase.fields },
         user: { locale: testCase.language }
       });
       const html = `<!doctype html><html><head><meta charset="utf-8"><style>
