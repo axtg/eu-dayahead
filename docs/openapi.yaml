@@ -128,6 +128,7 @@ paths:
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
         - $ref: '#/components/parameters/BestPeriodHours'
+        - $ref: '#/components/parameters/IncludeWindSolar'
       responses:
         '200':
           description: Today's energy prices
@@ -158,6 +159,7 @@ paths:
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
         - $ref: '#/components/parameters/BestPeriodHours'
+        - $ref: '#/components/parameters/IncludeWindSolar'
       responses:
         '200':
           description: Next 24 hours of energy prices
@@ -197,6 +199,7 @@ paths:
         - $ref: '#/components/parameters/RoundTo'
         - $ref: '#/components/parameters/Interval'
         - $ref: '#/components/parameters/BestPeriodHours'
+        - $ref: '#/components/parameters/IncludeWindSolar'
       responses:
         '200':
           description: Energy prices for the requested hours
@@ -415,6 +418,15 @@ components:
         maximum: 24
         example: 4
 
+    IncludeWindSolar:
+      name: includeWindSolar
+      in: query
+      description: Adds `windSolarShare` to each price. Fetched separately from prices and waited for at most 5 seconds, so a slow or failed fetch leaves prices intact and adds a `wind_solar_unavailable` warning. A slow fetch still completes in the background and serves later requests.
+      schema:
+        type: boolean
+        default: false
+        example: true
+
     Interval:
       name: interval
       in: query
@@ -521,7 +533,7 @@ components:
               example: 4
         warnings:
           type: array
-          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
+          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today. `wind_solar_unavailable` means `includeWindSolar` was requested but the forecast could not be fetched in time.
           items:
             type: string
           example: ['fallback_source: stekker']
@@ -568,7 +580,7 @@ components:
               example: 4
         warnings:
           type: array
-          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today.
+          description: Present only when something about the data needs attention. Omitted otherwise. `fallback_source` means it was served from a fallback source (e.g. Stekker when ENTSOE is unavailable). `stale_data` means an upstream refresh failed and earlier prices are being served. `incomplete_data` means prices are missing for part of today. `wind_solar_unavailable` means `includeWindSolar` was requested but the forecast could not be fetched in time.
           items:
             type: string
           example: ['fallback_source: stekker']
@@ -664,6 +676,12 @@ components:
           type: string
           description: Formatted local time
           example: '02:00'
+        windSolarShare:
+          type: number
+          format: float
+          nullable: true
+          description: Present only with `includeWindSolar=true`. Forecast wind and solar production as a percentage of forecast demand in the bidding zone, averaged over the interval, or null where no forecast is published yet. Can exceed 100. Not a renewable share or a CO₂ figure, because hydro, biomass and nuclear are not counted, so it understates how clean the grid is in hydro and nuclear zones (AT, CH, FR, NO, SE).
+          example: 48.2
         markup:
           $ref: '#/components/schemas/MarkupDetails'
 

@@ -552,6 +552,8 @@ function getCacheStats() {
 
 module.exports = {
   invalidParam,
+  parseBooleanParam,
+  logUpstreamFetch,
   parseBestPeriodHours,
   findBestPeriod,
   PRICES_UNAVAILABLE_MESSAGE,

@@ -183,6 +183,11 @@ Times are local to the country. `markup` and `includeVat` are optional and only 
 | `roundTo`                 | Integer | Decimal places to round to                                                                        | `5` (default)    |
 | `interval`                | String  | Granularity: `60M` (default; hourly mean) or `15M` (quarter-hour pass-through, ~96 entries/day)   | `60M`            |
 | `bestPeriodHours`         | Integer | Adds `bestPeriod`: cheapest run of this many hours (1-24) within the data                         | `4`              |
+| `includeWindSolar`        | Boolean | Adds `windSolarShare` to each price on `/today`, `/next24h` and `/next/:hours` (see below)        | `true`           |
+
+`windSolarShare` is forecast wind and solar production as a percentage of forecast demand in the country's bidding zone, from ENTSOE and updated hourly. It's `null` where no forecast is published yet, and can pass 100 when a zone produces more than it uses. If the forecast can't be fetched within 5 seconds, prices still return, with `null` shares and a `wind_solar_unavailable` warning.
+
+It isn't a renewable share or a CO₂ figure. ENTSOE has no day-ahead forecast for hydro, biomass or nuclear, so it understates how clean the grid is in hydro and nuclear zones (AT, CH, FR, NO, SE).
 
 ## 💡 Usage examples
 

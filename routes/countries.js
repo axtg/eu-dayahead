@@ -8,14 +8,15 @@ const {
   parseMarkupOptions,
   parseIntervalOption,
   parseBestPeriodHours,
+  parseBooleanParam,
   findBestPeriod,
   validateCountry,
-  fetchCountryPrices,
   enrichPricesWithCountryInfo,
   buildCountryResponse,
   invalidParam,
   pricesUnavailable
 } = require('../utils/helpers');
+const { fetchPricesWithWindSolar } = require('../utils/windSolar');
 
 function requireCountry(req) {
   const countryCode = validateCountry(req.params.country);
@@ -49,6 +50,7 @@ router.get('/:country/today', async (req, res, next) => {
 
     const interval = parseIntervalOption(req.query);
     const bestPeriodHours = parseBestPeriodHours(req.query);
+    const includeWindSolar = parseBooleanParam(req.query, 'includeWindSolar');
     const markupOptions = parseMarkupOptions(req.query, countryCode);
 
     const country = COUNTRIES[countryCode];
@@ -60,7 +62,7 @@ router.get('/:country/today', async (req, res, next) => {
     const todayStart = fromZonedTime(todayStartInTargetTz, country.timezone);
     const todayEnd = fromZonedTime(todayEndInTargetTz, country.timezone);
 
-    const result = await fetchCountryPrices(countryCode, markupOptions, { interval });
+    const result = await fetchPricesWithWindSolar(countryCode, markupOptions, { interval }, includeWindSolar);
 
     const todayPrices = result.prices.filter(price => {
       const priceTime = new Date(price.time);
@@ -86,6 +88,7 @@ router.get('/:country/today', async (req, res, next) => {
 async function sendNextHours(req, res, countryCode, hours, type, { reportHours = false } = {}) {
   const interval = parseIntervalOption(req.query);
   const bestPeriodHours = parseBestPeriodHours(req.query);
+  const includeWindSolar = parseBooleanParam(req.query, 'includeWindSolar');
   const markupOptions = parseMarkupOptions(req.query, countryCode);
 
   const country = COUNTRIES[countryCode];
@@ -94,7 +97,7 @@ async function sendNextHours(req, res, countryCode, hours, type, { reportHours =
   const currentHourStart = fromZonedTime(currentHourInTargetTz, country.timezone);
   const windowEnd = addHours(currentHourStart, hours);
 
-  const result = await fetchCountryPrices(countryCode, markupOptions, { interval });
+  const result = await fetchPricesWithWindSolar(countryCode, markupOptions, { interval }, includeWindSolar);
 
   const windowPrices = result.prices.filter(price => {
     const priceTime = new Date(price.time);
