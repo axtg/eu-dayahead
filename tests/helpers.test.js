@@ -354,3 +354,17 @@ describe('enrichPricesWithCountryInfo hour', () => {
     });
   });
 });
+
+describe('priceBasis', () => {
+  const { priceBasis } = require('../utils/helpers');
+
+  test.each([
+    [{ fixedMarkup: 0, variableMarkup: 0, vat: 0 }, 'excluding markup and VAT'],
+    [{ fixedMarkup: 0, variableMarkup: 0, vat: 0.21 }, 'including VAT, excluding markup'],
+    [{ fixedMarkup: 0.1, variableMarkup: 0, vat: 0 }, 'including your markup, excluding VAT'],
+    [{ fixedMarkup: 0, variableMarkup: 5, vat: 0 }, 'including your markup, excluding VAT'],
+    [{ fixedMarkup: 0.1, variableMarkup: 0, vat: 0.21 }, 'including your markup and VAT']
+  ])('%j', (options, expected) => {
+    expect(priceBasis(options)).toBe(expected);
+  });
+});
