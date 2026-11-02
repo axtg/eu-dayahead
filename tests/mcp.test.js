@@ -181,6 +181,48 @@ describe('POST /mcp', () => {
       await rpc('tools/list', { padding: 'x'.repeat(70 * 1024) }).expect(413);
     });
 
+    test('refuses a batch, which would get past the rate limit', async () => {
+      start('2026-11-02T08:00:00Z');
+      const call = id => ({
+        jsonrpc: '2.0',
+        id,
+        method: 'tools/call',
+        params: { name: 'get_prices', arguments: { country: 'nl' } }
+      });
+
+      const response = await post([call(1), call(2)]);
+
+      expect(response.status).toBe(400);
+      expect(response.body).not.toContain('pricePerKwh');
+    });
+
+    test('refuses a listen stream, because the tools never change', async () => {
+      const response = await post(
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'subscriptions/listen',
+          params: {
+            _meta: {
+              'io.modelcontextprotocol/protocolVersion': MODERN_VERSION,
+              'io.modelcontextprotocol/clientInfo': { name: 'test', version: '1' },
+              'io.modelcontextprotocol/clientCapabilities': {}
+            },
+            notifications: { toolsListChanged: true }
+          }
+        },
+        MODERN_VERSION
+      )
+        .set('MCP-Method', 'subscriptions/listen')
+        .timeout(3000);
+
+      expect(parseReply(response).error.code).toBe(-32603);
+    });
+
+    test('rejects malformed JSON', async () => {
+      await request(app).post('/mcp').set('Content-Type', 'application/json').send('{not json').expect(400);
+    });
+
     test('is rate limited', async () => {
       const response = await rpc('tools/list').expect(200);
 

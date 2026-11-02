@@ -31,7 +31,7 @@ Express REST API that aggregates day-ahead electricity prices for 9 European cou
 
 ### MCP server
 
-`routes/mcp.js` serves a stateless, sign-in-free MCP server at `/mcp`, built on the v2 `@modelcontextprotocol/server` and `/node` packages, with the `/api` rate limiter. Clients on the 2026-07-28 protocol get JSON; the SDK answers 2025-era clients with a short event stream. Tools return `{ available: false, reason }` when prices are missing, and only 4xx messages reach clients, as in `index.js`. `find_cheapest_window` uses `findUpcomingWindow`, which unlike the calendar's `findCheapestWindow` ignores the past and can run past midnight.
+`routes/mcp.js` serves a stateless, sign-in-free MCP server at `/mcp`, built on the v2 `@modelcontextprotocol/server` and `/node` packages, with the `/api` rate limiter. It refuses JSON-RPC batches and listen streams, which would get around that limit. Clients on the 2026-07-28 protocol get JSON; the SDK answers 2025-era clients with a short event stream. Tools return `{ available: false, reason }` when prices are missing, and only 4xx messages reach clients, as in `index.js`. `find_cheapest_window` uses `findUpcomingWindow`, which unlike the calendar's `findCheapestWindow` ignores the past and can run past midnight.
 
 ### Request flow
 

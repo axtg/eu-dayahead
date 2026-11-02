@@ -1,3 +1,4 @@
+const express = require('express');
 const { createMcpHandler, McpServer } = require('@modelcontextprotocol/server');
 const { toNodeHandler } = require('@modelcontextprotocol/node');
 const { formatInTimeZone } = require('date-fns-tz');
@@ -245,12 +246,22 @@ function createServer() {
 }
 
 // A new server per request and no sessions. Current clients get plain JSON. The SDK always answers 2025-era
-// clients with a short event stream, which closes after its one message.
-const options = { responseMode: 'json', maxRequestBodySize: MAX_REQUEST_BYTES };
-const handler = toNodeHandler(createMcpHandler(createServer, options));
+// clients with a short event stream, which closes after its one message. Listen streams would stay open
+// indefinitely, and the tools never change, so maxSubscriptions refuses them all.
+const handler = toNodeHandler(createMcpHandler(createServer, { responseMode: 'json', maxSubscriptions: 0 }));
 
-function mcpRoute(req, res, next) {
-  handler(req, res).catch(next);
+// A batch counts as one request for the rate limiter however many tool calls it holds.
+function refuseBatches(req, res, next) {
+  if (!Array.isArray(req.body)) return next();
+  return res.status(400).json({
+    jsonrpc: '2.0',
+    id: null,
+    error: { code: -32600, message: 'Batches are not supported.' }
+  });
 }
 
-module.exports = mcpRoute;
+function runHandler(req, res, next) {
+  handler(req, res, req.body).catch(next);
+}
+
+module.exports = [express.json({ limit: MAX_REQUEST_BYTES }), refuseBatches, runHandler];
