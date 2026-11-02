@@ -211,6 +211,65 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+  /api/{country}/calendar.ics:
+    get:
+      operationId: get_api__country__calendar
+      tags:
+        - Countries
+      summary: Subscribe to each day's cheapest window
+      description: |
+        An iCalendar feed with one event per day for the cheapest continuous window: today's, plus tomorrow's once
+        its prices are published. Windows use quarter-hour prices where available and can't cross midnight. A day
+        without all its prices gets no event.
+      parameters:
+        - $ref: '#/components/parameters/CountryPath'
+        - name: hours
+          in: query
+          description: Window length in whole hours. Must fit between `from` and `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 4
+        - name: from
+          in: query
+          description: Earliest local hour the window may start.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 23
+            default: 0
+            example: 7
+        - name: to
+          in: query
+          description: Latest local hour the window may end.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 24
+            example: 22
+        - $ref: '#/components/parameters/FixedMarkup'
+        - $ref: '#/components/parameters/VariableMarkup'
+        - $ref: '#/components/parameters/VAT'
+        - $ref: '#/components/parameters/AutoVAT'
+        - $ref: '#/components/parameters/RoundTo'
+      responses:
+        '200':
+          description: The calendar feed
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '304':
+          description: The feed hasn't changed since the request's `If-None-Match` value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /api/providers:
     get:
       tags:

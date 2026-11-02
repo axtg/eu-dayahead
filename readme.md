@@ -139,6 +139,31 @@ curl http://localhost:3000/api/countries
 | `GET /api/{country}/today`    | Today's prices (00:00-23:59)    | `/api/nl/today`    |
 | `GET /api/{country}/next24h`  | Next 24 hours from now          | `/api/fr/next24h`  |
 | `GET /api/{country}/next/{hours}` | Next 1-48 hours from now    | `/api/fr/next/6`   |
+| `GET /api/{country}/calendar.ics` | Cheapest window per day, as a calendar feed | `/api/nl/calendar.ics?hours=4&from=7&to=22` |
+
+### 📅 Calendar feed
+
+Subscribe to `/api/{country}/calendar.ics` to get one event a day for the cheapest continuous window: today's, plus tomorrow's once its prices are published (about 14:30 CET).
+
+| Parameter | Meaning | Default |
+| --------- | ------- | ------- |
+| `hours` | Window length in whole hours, 1-24 | `4` |
+| `from`, `to` | Local hours the window must lie within, 0-24 | `0`, `24` |
+| `markup`, `variableMarkup`, `vat` | Same as other endpoints, and included in the average shown | none |
+
+Windows use quarter-hour prices where the zone publishes them, and can't cross midnight. Calendar apps decide how often they reload a feed. Google Calendar can take a day, so on Android an app like ICSx⁵ with a set sync interval works better.
+
+### 🤖 MCP server
+
+`/mcp` lets AI assistants answer questions like "when today should I run my 4-hour dishwasher?". It's a stateless [MCP](https://modelcontextprotocol.io) server over Streamable HTTP, with no sign-in. In Claude, add `https://dap.xadi.eu/mcp` as a custom connector with "No sign in".
+
+| Tool | What it does |
+|------|--------------|
+| `find_cheapest_window` | The cheapest block of `hours` that starts `today` or `tomorrow`, never in the past. `from` is the earliest start hour and `to` the latest finish. Without `to`, a window can run past midnight when the next day's prices are known. |
+| `get_prices` | Prices for today, or the `nextHours` (1-48), by the hour or quarter hour. |
+| `list_countries` | Supported countries with their codes, timezones and default VAT. |
+
+Times are local to the country. `markup` and `includeVat` are optional and only change the price shown.
 
 ### 🏢 Energy provider presets
 

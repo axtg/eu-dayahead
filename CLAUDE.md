@@ -25,6 +25,14 @@ Server defaults to `PORT=3000`. Copy `.env.example` to `.env` for local config.
 
 Express REST API that aggregates day-ahead electricity prices for 9 European countries, applies markup/VAT/rounding, and serves results plus a static landing page.
 
+### Calendar feed
+
+`routes/calendar.js` serves `/api/:country/calendar.ics`: one event per day for the cheapest continuous window (`hours`, default 4, inside local hours `from`-`to`). `utils/cheapestWindow.js` finds the window and `utils/ics.js` writes the file. Quarter-hour ENTSOE prices are used, or hourly means for Stekker data. A day without all its prices gets no event. If no day has a window the response is a 503, because an empty calendar would delete a subscriber's existing events. Output stays byte-identical for unchanged windows, so clients can get a 304.
+
+### MCP server
+
+`routes/mcp.js` serves a stateless, sign-in-free MCP server at `/mcp`, built on the v2 `@modelcontextprotocol/server` and `/node` packages, with the `/api` rate limiter. It refuses JSON-RPC batches and listen streams, which would get around that limit. Clients on the 2026-07-28 protocol get JSON; the SDK answers 2025-era clients with a short event stream. Tools return `{ available: false, reason }` when prices are missing, and only 4xx messages reach clients, as in `index.js`. `find_cheapest_window` uses `findUpcomingWindow`, which unlike the calendar's `findCheapestWindow` ignores the past and can run past midnight.
+
 ### Request flow
 
 1. `index.js` is the entry. It mounts `loggingMiddleware` (Better Stack/Logtail), serves `public/` statically, applies a per-IP in-memory rate limiter from `middleware/rateLimit.js` to `/api` routes (`RATE_LIMIT_RPS`, default 10/sec, returns `X-RateLimit-*` headers and 429 with `Retry-After`; keyed on `req.ip` with `trust proxy` set to `loopback` for the nginx on the same host), and exposes `/health`, `/health/cache`, `/openapi.yaml`.

@@ -428,6 +428,13 @@ async function fetchCountryPrices(countryCode, markupOptions, intervalOptions = 
   };
 }
 
+// Fallback quarter hours can carry stale hourly prices, so those windows use hourly means.
+async function fetchFinestPrices(countryCode, markupOptions) {
+  const result = await fetchCountryPrices(countryCode, markupOptions, { interval: '15M' });
+  if (result.source === 'entsoe') return result;
+  return fetchCountryPrices(countryCode, markupOptions, { interval: '60M' });
+}
+
 function enrichPricesWithCountryInfo(prices, countryCode, options = {}) {
   const country = COUNTRIES[countryCode];
   const referenceTime = options.referenceTime ? new Date(options.referenceTime) : null;
@@ -543,6 +550,7 @@ module.exports = {
   parseIntervalOption,
   validateCountry,
   fetchCountryPrices,
+  fetchFinestPrices,
   enrichPricesWithCountryInfo,
   buildCountryResponse,
   aggregateToHourly,

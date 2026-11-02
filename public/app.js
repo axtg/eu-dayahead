@@ -41,6 +41,135 @@
     return qs ? `${base}?${qs}` : base;
   }
 
+  // Integrations: the calendar card builds a feed URL from the page's settings.
+  const CALENDAR_DEFAULTS = { hours: 4, from: 7, to: 22 };
+  const pad = hour => `${String(hour).padStart(2, '0')}:00`;
+
+  function fillOptions(select, values, label, selected) {
+    select.replaceChildren(
+      ...values.map(value => {
+        const option = new Option(label(value), value);
+        option.selected = value === selected;
+        return option;
+      })
+    );
+  }
+
+  function buildCalendarPath({ country, markupCents, vatPercent, hours, from, to }) {
+    const params = new URLSearchParams({ hours });
+    if (from > 0) params.set('from', from);
+    if (to < 24) params.set('to', to);
+    const markup = centsToEuros(markupCents);
+    const vat = percentToDecimal(vatPercent);
+    if (markup > 0) params.set('markup', markup.toString());
+    if (vat > 0) params.set('vat', vat.toString());
+    return `/api/${country}/calendar.ics?${params}`;
+  }
+
+  function calendarSettingsText() {
+    const countryName = els.country.selectedOptions[0]?.textContent.trim() || '';
+    const vat = Number(els.vatPercent.value) || 0;
+    const markup = Number(els.markupCents.value) || 0;
+    const prices = `${vat > 0 ? `${vat}% VAT` : 'no VAT'}, ${markup > 0 ? `${markup} ct markup` : 'no markup'}`;
+    return `From this page's settings: ${countryName}, ${prices}.`;
+  }
+
+  function setupCalendarCard() {
+    const hoursEl = document.getElementById('calendarHours');
+    const fromEl = document.getElementById('calendarFrom');
+    const toEl = document.getElementById('calendarTo');
+    const subscribe = document.getElementById('calendarSubscribe');
+    const copy = document.getElementById('calendarCopy');
+    const settings = document.getElementById('calendarSettings');
+    const range = (start, end) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+    fillOptions(hoursEl, range(1, 24), value => `${value} ${value === 1 ? 'hour' : 'hours'}`, CALENDAR_DEFAULTS.hours);
+    fillOptions(fromEl, range(0, 23), pad, CALENDAR_DEFAULTS.from);
+    fillOptions(toEl, range(1, 24), pad, CALENDAR_DEFAULTS.to);
+
+    let feedUrl = '';
+    function update() {
+      const hours = Number(hoursEl.value);
+      const from = Number(fromEl.value);
+      const to = Number(toEl.value);
+      const fits = to - from >= hours;
+      const path = buildCalendarPath({
+        country: els.country.value,
+        markupCents: els.markupCents.value,
+        vatPercent: els.vatPercent.value,
+        hours,
+        from,
+        to
+      });
+      feedUrl = fits ? `${window.location.origin}${path}` : '';
+      subscribe.href = fits ? feedUrl.replace(/^https?:/, 'webcal:') : '#';
+      subscribe.classList.toggle('hidden', !fits);
+      copy.classList.toggle('hidden', !fits);
+      settings.textContent = fits
+        ? calendarSettingsText()
+        : `A ${hours}-hour window doesn't fit between ${pad(from)} and ${pad(to)}.`;
+    }
+
+    [hoursEl, fromEl, toEl].forEach(el => el.addEventListener('change', update));
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(feedUrl);
+        copy.textContent = 'Copied!';
+        setTimeout(() => (copy.textContent = 'Copy link'), 1000);
+      } catch (e) {
+        console.error('Copy failed', e);
+      }
+    });
+    return update;
+  }
+
+  function setupMcpCard() {
+    const copy = document.getElementById('mcpCopy');
+    const url = `${window.location.origin}/mcp`;
+    document.getElementById('mcpUrl').textContent = url;
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        copy.textContent = 'Copied!';
+        setTimeout(() => (copy.textContent = 'Copy link'), 1000);
+      } catch (e) {
+        console.error('Copy failed', e);
+      }
+    });
+  }
+
+  let openIntegrationsFromHash = () => {};
+
+  function setupIntegrationsModal() {
+    const modal = document.getElementById('integrationsModal');
+    const updateCalendarCard = setupCalendarCard();
+    setupMcpCard();
+
+    function open() {
+      document.getElementById('aboutModal').classList.add('hidden');
+      updateCalendarCard();
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function close() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      if (window.location.hash === '#integrations') history.replaceState(null, '', window.location.pathname);
+    }
+
+    document.getElementById('integrationsBtn').addEventListener('click', open);
+    document.getElementById('closeIntegrationsModal').addEventListener('click', close);
+    modal.addEventListener('click', e => {
+      if (e.target === modal) close();
+    });
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash === '#integrations') open();
+    });
+    return () => {
+      if (window.location.hash === '#integrations') open();
+    };
+  }
+
   let currentFullUrl = '';
   function setApiUrlDisplay(endpoint) {
     currentFullUrl = `${window.location.origin}${endpoint}`;
@@ -405,6 +534,8 @@
       });
     });
 
+    openIntegrationsFromHash = setupIntegrationsModal();
+
     // About modal
     const aboutBtn = document.getElementById('aboutBtn');
     const aboutModal = document.getElementById('aboutModal');
@@ -577,6 +708,7 @@
       setIntervalActive('60M');
       updateVatForCountry('nl');
     }
+    openIntegrationsFromHash();
     await refresh();
   }
 
