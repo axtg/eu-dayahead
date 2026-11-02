@@ -133,7 +133,7 @@
     <link rel="preload" href="/app.js?v=6" as="script" />
     <link rel="preload" href="/styles.css?v=3" as="style" />
     <link rel="stylesheet" href="/styles.css?v=3" />
-    <link rel="stylesheet" href="/tailwind.css?v=3" />
+    <link rel="stylesheet" href="/tailwind.css?v=4" />
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <noscript>
@@ -245,8 +245,9 @@
           <div class="block min-w-0 md:col-span-2 lg:col-span-2">
             <span class="block text-xs text-gray-600 mb-1.5">Timeframe</span>
             <div class="flex w-full rounded-lg border border-gray-200 bg-white p-1 shadow-sm" role="group" aria-label="Timeframe switch">
-              <button id="tfNext24h" type="button" class="flex-1 px-3 py-2 text-sm rounded-md bg-black text-white hover:bg-gray-800 focus:ring-2 focus:ring-black" aria-pressed="true">Next 24 hours</button>
-              <button id="tfToday" type="button" class="flex-1 px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
+              <button id="tfNext24h" type="button" class="flex-1 px-1 lg:px-2 py-2 text-sm whitespace-nowrap rounded-md bg-black text-white hover:bg-gray-800 focus:ring-2 focus:ring-black" aria-pressed="true">Next 24h</button>
+              <button id="tfToday" type="button" class="flex-1 px-1 lg:px-2 py-2 text-sm whitespace-nowrap rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black" aria-pressed="false">Today</button>
+              <button id="tfTomorrow" type="button" disabled title="Tomorrow's prices are published in the early afternoon" class="flex-1 px-1 lg:px-2 py-2 text-sm whitespace-nowrap rounded-md text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-black disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" aria-pressed="false">Tomorrow</button>
             </div>
             <input type="hidden" id="timeframe" value="next24h" />
           </div>
@@ -269,7 +270,11 @@
             <div>
               <h2 class="sr-only sm:not-sr-only text-lg font-medium text-gray-900 whitespace-nowrap">Price graph</h2>
             </div>
-            <div class="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3">
+            <div class="flex flex-wrap w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3">
+              <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 whitespace-nowrap">
+                Cheapest
+                <select id="cheapestLength" aria-label="How long the appliance runs, in hours and minutes" class="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-900 shadow-sm outline-none focus:ring-2 focus:ring-black"></select>
+              </label>
               <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer whitespace-nowrap transition-colors">
                 <input id="windSolar" type="checkbox" class="h-3.5 w-3.5 cursor-pointer accent-emerald-600" />
                 Wind + solar
@@ -278,7 +283,7 @@
                 <svg class="hidden sm:block w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                 </svg>
-                Copy API URL
+                <span>Copy <span class="hidden sm:inline">API </span>URL</span>
               </button>
             </div>
           </div>
@@ -315,6 +320,7 @@
           <div class="flex-1 min-h-0">
             <canvas id="priceChart" class="h-full w-full" aria-label="Day-ahead price chart" role="img"></canvas>
           </div>
+          <p id="cheapestSummary" class="sr-only"></p>
           <p id="windSolarNote" class="mt-2 shrink-0 text-xs text-gray-500 hidden">
             <span class="hidden sm:inline">Forecast wind and solar production as a share of forecast demand. It can pass 100%, and
             gaps mean no forecast yet.</span>
@@ -608,7 +614,8 @@
       </div>
     </div>
 
-    <script src="/app.js?v=6" defer></script>
+    <script src="/cheapestStart.js?v=1" defer></script>
+    <script src="/app.js?v=7" defer></script>
   </body>
 </html>
 
