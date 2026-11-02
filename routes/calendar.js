@@ -7,7 +7,7 @@ const { buildCalendar } = require('../utils/ics');
 const {
   parseMarkupOptions,
   validateCountry,
-  fetchCountryPrices,
+  fetchFinestPrices,
   invalidParam,
   pricesUnavailable
 } = require('../utils/helpers');
@@ -39,13 +39,6 @@ function parseWindowOptions(query) {
     throw invalidParam(`A ${hours}-hour window doesn't fit between from=${from} and to=${to}.`);
   }
   return { hours, from, to };
-}
-
-// Fallback quarter hours can carry stale hourly prices, so those windows use hourly means.
-async function fetchFinestPrices(countryCode, markupOptions) {
-  const result = await fetchCountryPrices(countryCode, markupOptions, { interval: '15M' });
-  if (result.source === 'entsoe') return result;
-  return fetchCountryPrices(countryCode, markupOptions, { interval: '60M' });
 }
 
 function formatPrice(amount, currency, decimals) {
