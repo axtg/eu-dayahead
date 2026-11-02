@@ -224,6 +224,16 @@ function findBestPeriod(prices, hours, resolutionMinutes, roundTo) {
   };
 }
 
+// Says what a price includes, for text shown to people.
+function priceBasis({ fixedMarkup, variableMarkup, vat }) {
+  const hasMarkup = fixedMarkup !== 0 || variableMarkup !== 0;
+  const hasVat = vat !== 0;
+  if (hasMarkup && hasVat) return 'including your markup and VAT';
+  if (hasMarkup) return 'including your markup, excluding VAT';
+  if (hasVat) return 'including VAT, excluding markup';
+  return 'excluding markup and VAT';
+}
+
 function validateCountry(countryCode) {
   if (!countryCode || !Object.hasOwn(COUNTRIES, countryCode.toLowerCase())) return null;
   return countryCode.toLowerCase();
@@ -547,6 +557,7 @@ module.exports = {
   PRICES_UNAVAILABLE_MESSAGE,
   pricesUnavailable,
   parseMarkupOptions,
+  priceBasis,
   parseIntervalOption,
   validateCountry,
   fetchCountryPrices,

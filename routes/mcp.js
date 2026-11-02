@@ -10,7 +10,8 @@ const {
   PRICES_UNAVAILABLE_MESSAGE,
   fetchCountryPrices,
   fetchFinestPrices,
-  parseMarkupOptions
+  parseMarkupOptions,
+  priceBasis
 } = require('../utils/helpers');
 const { logError } = require('../middleware/logging');
 const { version } = require('../package.json');
@@ -79,12 +80,6 @@ function parsePriceOptions({ markup, includeVat }, country) {
   if (markup !== undefined) query.markup = String(markup);
   if (includeVat !== undefined) query.includeVat = String(includeVat);
   return parseMarkupOptions(query, country);
-}
-
-function priceBasis({ fixedMarkup, variableMarkup, vat }) {
-  return fixedMarkup !== 0 || variableMarkup !== 0 || vat !== 0
-    ? 'including your markup and VAT'
-    : 'excluding markup and VAT';
 }
 
 function roundPrice(price) {

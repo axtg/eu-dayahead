@@ -320,6 +320,14 @@ describe('POST /mcp', () => {
       expect(data.priceBasis).toBe('including your markup and VAT');
     });
 
+    test('with only VAT, the price basis does not mention your markup', async () => {
+      start('2026-11-02T08:00:00Z');
+
+      const data = await toolData('find_cheapest_window', { country: 'nl', hours: 4, includeVat: true });
+
+      expect(data.priceBasis).toBe('including VAT, excluding markup');
+    });
+
     test('an upstream failure is a tool error without internal details', async () => {
       start('2026-11-02T08:00:00Z', () => {
         throw new Error('secret upstream detail');

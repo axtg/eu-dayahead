@@ -151,6 +151,14 @@ describe('GET /api/:country/calendar.ics', () => {
     expect(unfold(body)).toContain('your markup and VAT');
   });
 
+  test('with only VAT, the description does not mention your markup', async () => {
+    start(BEFORE_PUBLICATION);
+
+    const { body } = await get('?vat=auto').expect(200);
+
+    expect(unfold(body)).toContain('including VAT\\, excluding markup');
+  });
+
   test('the description says when the price is the bare market price', async () => {
     start(BEFORE_PUBLICATION);
 

@@ -6,6 +6,7 @@ const { findCheapestWindow, localDate } = require('../utils/cheapestWindow');
 const { buildCalendar } = require('../utils/ics');
 const {
   parseMarkupOptions,
+  priceBasis,
   validateCountry,
   fetchFinestPrices,
   invalidParam,
@@ -50,13 +51,8 @@ function formatPrice(amount, currency, decimals) {
   }).format(amount);
 }
 
-function hasMarkup({ fixedMarkup, variableMarkup, vat }) {
-  return fixedMarkup !== 0 || variableMarkup !== 0 || vat !== 0;
-}
-
 function windowEvent(window, { countryCode, country, options, markupOptions, source }) {
   const { hours, from, to } = options;
-  const priceBasis = hasMarkup(markupOptions) ? 'including your markup and VAT' : 'excluding markup and VAT';
   const average = formatPrice(window.averagePrice, country.currency, 4);
 
   return {
@@ -66,7 +62,7 @@ function windowEvent(window, { countryCode, country, options, markupOptions, sou
     summary: `Cheapest ${hours}h · avg ${formatPrice(window.averagePrice, country.currency, 2)}/kWh`,
     description: [
       `Cheapest ${hours}-hour window in ${country.name} on ${window.date}.`,
-      `Average ${average}/kWh, ${priceBasis}.`,
+      `Average ${average}/kWh, ${priceBasis(markupOptions)}.`,
       DATA_CREDITS[source]
     ].join('\n')
   };
