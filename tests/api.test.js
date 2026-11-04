@@ -318,7 +318,7 @@ describe('European Energy Prices API', () => {
         expect(next24hResponse.body.info.timezone).toBe('Europe/Amsterdam');
       }, 15000);
 
-      test('Different countries should use their respective timezones', async () => {
+      testIfEntsoe('Different countries should use their respective timezones', async () => {
         const nlResponse = await request(app).get('/api/nl/today').expect(200);
         const chResponse = await request(app).get('/api/ch/today').expect(200);
 
