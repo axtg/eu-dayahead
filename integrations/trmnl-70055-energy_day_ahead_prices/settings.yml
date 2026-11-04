@@ -38,6 +38,7 @@ custom_fields:
   description: EU Energy Day Ahead Prices was created by Xander (@axtg).
   github_url: https://github.com/axtg/eu-dayahead/
   learn_more_url: https://dap.xadi.eu/docs
+  email_address: trmnl-plugin@xadi.eu
 - keyname: timeframe
   name: Timeframe
   field_type: select
