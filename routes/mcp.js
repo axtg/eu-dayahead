@@ -19,6 +19,8 @@ const { version } = require('../package.json');
 const HOUR_MS = 3_600_000;
 const MAX_REQUEST_BYTES = 64 * 1024;
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false };
+// Human-readable names for directory listings: as the tool's title and annotations.title, as hosts read either.
+const titled = title => ({ title, annotations: { ...READ_ONLY, title } });
 const DATA_SOURCES = {
   entsoe: 'ENTSOE Transparency Platform',
   stekker: 'Stekker.app, used while ENTSOE is unavailable'
@@ -206,12 +208,12 @@ function createServer() {
   server.registerTool(
     'find_cheapest_window',
     {
+      ...titled('Find the cheapest time to run an appliance'),
       description:
         'Find the cheapest time to run an appliance, such as a dishwasher or washing machine: the continuous block ' +
         'of hours with the lowest average day-ahead price that starts on the given day, never in the past. It can ' +
         'finish after midnight unless `to` is set. Markup and VAT only change the price shown, not the timing.',
-      inputSchema: windowInput,
-      annotations: READ_ONLY
+      inputSchema: windowInput
     },
     safely(findWindow)
   );
@@ -219,10 +221,10 @@ function createServer() {
   server.registerTool(
     'get_prices',
     {
+      ...titled('Get electricity prices'),
       description:
         "Get day-ahead electricity prices for all of today, or for the next hours, in the country's local time.",
-      inputSchema: pricesInput,
-      annotations: READ_ONLY
+      inputSchema: pricesInput
     },
     safely(getPrices)
   );
@@ -230,9 +232,9 @@ function createServer() {
   server.registerTool(
     'list_countries',
     {
+      ...titled('List supported countries'),
       description: 'List the supported countries with their codes, timezones and default VAT.',
-      inputSchema: z.object({}),
-      annotations: READ_ONLY
+      inputSchema: z.object({})
     },
     safely(listCountries)
   );

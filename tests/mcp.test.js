@@ -139,7 +139,12 @@ describe('POST /mcp', () => {
 
       const names = result.tools.map(tool => tool.name).sort();
       expect(names).toEqual(['find_cheapest_window', 'get_prices', 'list_countries']);
-      for (const tool of result.tools) expect(tool.annotations.readOnlyHint).toBe(true);
+      for (const tool of result.tools) {
+        expect(tool.annotations.readOnlyHint).toBe(true);
+        // Directories list a tool by its human-readable title; hosts read either place.
+        expect(tool.annotations.title).toEqual(expect.any(String));
+        expect(tool.title).toBe(tool.annotations.title);
+      }
     });
 
     test('country is required, and the description says to ask for it', async () => {
